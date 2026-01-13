@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,7 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { 
   Scale, 
   Loader2, 
@@ -67,7 +71,7 @@ export function IniciarFracionamento({ onVoltar }: IniciarFracionamentoProps) {
   const [configs, setConfigs] = useState<ConfigFracionamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [etapa, setEtapa] = useState<'inicio' | 'selecao' | 'precos' | 'confirmacao'>('inicio');
+  const [etapa, setEtapa] = useState<'selecao' | 'precos' | 'confirmacao'>('selecao');
   const [observacao, setObservacao] = useState('');
   const [margemPadrao, setMargemPadrao] = useState(1);
   
@@ -270,7 +274,7 @@ export function IniciarFracionamento({ onVoltar }: IniciarFracionamentoProps) {
       toast.success(`Fracionamento salvo com ${itensValidos.length} produtos!`);
       
       // Voltar ao início
-      setEtapa('inicio');
+      setEtapa('selecao');
       setSelecionados(new Set());
       setItensSelecionados([]);
       setObservacao('');
@@ -317,63 +321,34 @@ export function IniciarFracionamento({ onVoltar }: IniciarFracionamentoProps) {
     );
   }
 
-  // ETAPA 1: Início
-  if (etapa === 'inicio') {
-    return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="text-center space-y-6 max-w-md mx-auto">
-            <div className="w-20 h-20 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
-              <Scale className="w-10 h-10 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold">Fracionamento do Dia</h2>
-              <p className="text-muted-foreground mt-2">
-                Inicie uma nova sessão para calcular os preços de venda baseado nos custos das caixas de hoje
-              </p>
-            </div>
-            
-            <div className="space-y-3">
-              <Label>Observação (opcional)</Label>
-              <Textarea
-                placeholder="Ex: Mercadoria do CEASA, fornecedor X..."
-                value={observacao}
-                onChange={(e) => setObservacao(e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            <Button size="lg" onClick={() => setEtapa('selecao')} className="w-full">
-              <Play className="w-5 h-5 mr-2" />
-              INICIAR FRACIONAMENTO DO DIA
-            </Button>
-            
-            <p className="text-sm text-muted-foreground">
-              {configs.length} produtos disponíveis para fracionamento
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // ETAPA 2: Seleção de Produtos
+  // ETAPA 1: Seleção de Produtos (estilo da imagem de referência)
   if (etapa === 'selecao') {
+    const dataHoje = format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR });
+    
     return (
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Selecione os Produtos</CardTitle>
-              <CardDescription>
-                Escolha os produtos que serão fracionados hoje
-              </CardDescription>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600">
+                <Play className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Iniciar Fracionamento</CardTitle>
+                <p className="text-sm text-muted-foreground capitalize">{dataHoje}</p>
+              </div>
             </div>
-            <Badge variant="outline">{selecionados.size} selecionados</Badge>
+            <Button 
+              onClick={iniciarPreenchimentoPrecos}
+              disabled={selecionados.size === 0}
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              Continuar ({selecionados.size})
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between">
             <Button
               variant="outline"
               size="sm"
@@ -383,53 +358,74 @@ export function IniciarFracionamento({ onVoltar }: IniciarFracionamentoProps) {
             </Button>
           </div>
 
-          <div className="grid gap-2 max-h-[400px] overflow-y-auto">
-            {configs.map((config) => (
-              <div
-                key={config.id}
-                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  selecionados.has(config.id) 
-                    ? 'bg-primary/10 border-primary' 
-                    : 'hover:bg-muted'
-                }`}
-                onClick={() => handleToggleSelecao(config.id)}
-              >
-                <Checkbox
-                  checked={selecionados.has(config.id)}
-                  onCheckedChange={() => handleToggleSelecao(config.id)}
-                />
-                <div className="flex-1">
-                  <p className="font-medium">{config.nome_produto}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Caixa: {config.peso_caixa_kg}kg | {config.unidades_por_caixa} unidades
-                  </p>
-                </div>
-                <Badge variant="secondary">
-                  {config.tipo_venda === 'kg' ? 'Por Kg' : config.tipo_venda === 'unidade' ? 'Por Un' : 'Ambos'}
-                </Badge>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex justify-between pt-4 border-t">
-            <Button variant="outline" onClick={() => setEtapa('inicio')}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
-            <Button 
-              onClick={iniciarPreenchimentoPrecos}
-              disabled={selecionados.size === 0}
-            >
-              Continuar
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+          <div className="overflow-x-auto border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="w-16"></TableHead>
+                  <TableHead>Produto</TableHead>
+                  <TableHead className="text-center">Peso Caixa</TableHead>
+                  <TableHead className="text-center">Unidades</TableHead>
+                  <TableHead className="text-center">Tipo Venda</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <AnimatePresence>
+                  {configs.map((config, index) => {
+                    const isSelected = selecionados.has(config.id);
+                    
+                    return (
+                      <motion.tr
+                        key={config.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ delay: index * 0.02 }}
+                        className={`cursor-pointer transition-colors ${
+                          isSelected ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'hover:bg-muted/50'
+                        }`}
+                        onClick={() => handleToggleSelecao(config.id)}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => handleToggleSelecao(config.id)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">{config.nome_produto}</TableCell>
+                        <TableCell className="text-center text-muted-foreground">
+                          {config.peso_caixa_kg} kg
+                        </TableCell>
+                        <TableCell className="text-center text-muted-foreground">
+                          {config.unidades_por_caixa}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant="secondary"
+                            className={
+                              config.tipo_venda === 'kg' 
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' 
+                                : config.tipo_venda === 'unidade'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                                : 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                            }
+                          >
+                            {config.tipo_venda === 'kg' ? 'Por Kg' : config.tipo_venda === 'unidade' ? 'Por Un' : 'Ambos'}
+                          </Badge>
+                        </TableCell>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  // ETAPA 3: Preencher Preços
+  // ETAPA 2: Preencher Preços
   if (etapa === 'precos') {
     return (
       <Card>
@@ -498,50 +494,40 @@ export function IniciarFracionamento({ onVoltar }: IniciarFracionamentoProps) {
                     
                     <div className="space-y-1">
                       <Label className="text-xs">Custo/kg</Label>
-                      <div className="h-10 flex items-center px-3 bg-muted rounded-md text-sm">
+                      <div className="flex items-center h-10 px-3 bg-muted rounded-md text-sm">
                         R$ {formatarPreco(item.custo_kg)}
                       </div>
                     </div>
                     
                     <div className="space-y-1">
-                      <Label className="text-xs">Custo/un</Label>
-                      <div className="h-10 flex items-center px-3 bg-muted rounded-md text-sm">
-                        R$ {formatarPreco(item.custo_un)}
-                      </div>
+                      <Label className="text-xs">Venda/kg</Label>
+                      <Input
+                        placeholder={formatarPreco(item.preco_venda_kg)}
+                        value={item.preco_venda_kg_manual}
+                        onChange={(e) => handlePrecoVendaManual(index, 'kg', e.target.value)}
+                        disabled={!precoCaixaValido}
+                        className="bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200"
+                      />
                     </div>
                   </div>
                   
-                  {precoCaixaValido && (
+                  {item.config.tipo_venda !== 'kg' && (
                     <div className="grid grid-cols-2 gap-3 pt-2 border-t">
                       <div className="space-y-1">
-                        <Label className="text-xs text-primary font-semibold">Preço Venda/kg</Label>
-                        <Input
-                          placeholder={formatarPreco(item.preco_venda_kg)}
-                          value={item.preco_venda_kg_manual}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/[^\d,]/g, '');
-                            handlePrecoVendaManual(index, 'kg', val);
-                          }}
-                          className="font-bold text-primary"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Sugerido: R$ {formatarPreco(calcularPrecoVenda(item.custo_kg, item.margem))}
-                        </p>
+                        <Label className="text-xs">Custo/un</Label>
+                        <div className="flex items-center h-10 px-3 bg-muted rounded-md text-sm">
+                          R$ {formatarPreco(item.custo_un)}
+                        </div>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs text-primary font-semibold">Preço Venda/un</Label>
+                        <Label className="text-xs">Venda/un</Label>
                         <Input
                           placeholder={formatarPreco(item.preco_venda_un)}
                           value={item.preco_venda_un_manual}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/[^\d,]/g, '');
-                            handlePrecoVendaManual(index, 'un', val);
-                          }}
-                          className="font-bold text-primary"
+                          onChange={(e) => handlePrecoVendaManual(index, 'un', e.target.value)}
+                          disabled={!precoCaixaValido}
+                          className="bg-blue-50 dark:bg-blue-950/30 border-blue-200"
                         />
-                        <p className="text-xs text-muted-foreground">
-                          Sugerido: R$ {formatarPreco(calcularPrecoVenda(item.custo_un, item.margem))}
-                        </p>
                       </div>
                     </div>
                   )}
@@ -550,99 +536,33 @@ export function IniciarFracionamento({ onVoltar }: IniciarFracionamentoProps) {
             })}
           </div>
 
+          <div className="space-y-3 pt-4 border-t">
+            <Label>Observação (opcional)</Label>
+            <Textarea
+              placeholder="Ex: Mercadoria do CEASA, fornecedor X..."
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              rows={2}
+            />
+          </div>
+
           <div className="flex justify-between pt-4 border-t">
             <Button variant="outline" onClick={() => setEtapa('selecao')}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar
             </Button>
             <Button 
-              onClick={() => setEtapa('confirmacao')}
-              disabled={itensValidos.length === 0}
+              onClick={handleSalvar}
+              disabled={saving || itensValidos.length === 0}
+              className="bg-emerald-600 hover:bg-emerald-700"
             >
-              Revisar ({itensValidos.length} itens)
-              <ArrowRight className="w-4 h-4 ml-2" />
+              {saving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Salvar ({itensValidos.length} itens)
             </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // ETAPA 4: Confirmação
-  if (etapa === 'confirmacao') {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Check className="w-5 h-5 text-green-500" />
-            Confirmar Fracionamento
-          </CardTitle>
-          <CardDescription>
-            Revise os preços calculados antes de salvar
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2">Produto</th>
-                  <th className="text-right py-2">Caixa</th>
-                  <th className="text-right py-2">Custo/kg</th>
-                  <th className="text-right py-2">Venda/kg</th>
-                  <th className="text-right py-2">Custo/un</th>
-                  <th className="text-right py-2">Venda/un</th>
-                </tr>
-              </thead>
-              <tbody>
-                {itensValidos.map((item) => (
-                  <tr key={item.config.id} className="border-b">
-                    <td className="py-2 font-medium">{item.config.nome_produto}</td>
-                    <td className="text-right py-2">R$ {item.preco_caixa}</td>
-                    <td className="text-right py-2 text-muted-foreground">
-                      R$ {formatarPreco(item.custo_kg)}
-                    </td>
-                    <td className="text-right py-2 font-bold text-primary">
-                      R$ {formatarPreco(item.preco_venda_kg)}
-                    </td>
-                    <td className="text-right py-2 text-muted-foreground">
-                      R$ {formatarPreco(item.custo_un)}
-                    </td>
-                    <td className="text-right py-2 font-bold text-primary">
-                      R$ {formatarPreco(item.preco_venda_un)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {observacao && (
-            <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">Observação:</p>
-              <p className="text-sm">{observacao}</p>
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={() => setEtapa('precos')}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline">
-                <Printer className="w-4 h-4 mr-2" />
-                Imprimir
-              </Button>
-              <Button onClick={handleSalvar} disabled={saving}>
-                {saving ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                SALVAR FRACIONAMENTO
-              </Button>
-            </div>
           </div>
         </CardContent>
       </Card>
