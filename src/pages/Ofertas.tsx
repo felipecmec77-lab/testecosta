@@ -31,15 +31,14 @@ import {
   Eye,
   Edit,
   Save,
-  Users
+  Users,
+  Sparkles
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import OfertasPDF from '@/components/ofertas/OfertasPDF';
-import HortifrutiOfertaTab from '@/components/ofertas/HortifrutiOfertaTab';
 import { Leaf, Scale } from 'lucide-react';
 import OfertasHortifrutiPDF from '@/components/ofertas/OfertasHortifrutiPDF';
-import { FracionamentoTab } from '@/components/ofertas/FracionamentoTab';
 
 interface ItemEstoque {
   id: string;
@@ -681,15 +680,15 @@ const Ofertas = () => {
             <span className="text-xs md:text-sm font-medium">HORTI</span>
           </button>
           <button
-            onClick={() => setActiveTab('fracionamento')}
+            onClick={() => setActiveTab('historico')}
             className={`flex flex-col items-center justify-center p-3 md:p-4 rounded-xl transition-all duration-300 ${
-              activeTab === 'fracionamento'
-                ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg scale-[1.02]'
+              activeTab === 'historico'
+                ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-[1.02]'
                 : 'bg-card border border-border hover:bg-muted/50 text-foreground hover:scale-[1.01]'
             }`}
           >
-            <Scale className="w-6 h-6 mb-1" />
-            <span className="text-xs md:text-sm font-medium">FRAÇÃO</span>
+            <TrendingUp className="w-6 h-6 mb-1" />
+            <span className="text-xs md:text-sm font-medium">HISTÓRICO</span>
           </button>
           <button
             onClick={() => setActiveTab('salvas')}
@@ -1015,27 +1014,96 @@ const Ofertas = () => {
             )}
           </TabsContent>
 
-          {/* Hortifruti - Aba Especial com Fracionamento */}
+          {/* Hortifruti - Escolha de Método */}
           <TabsContent value="hortifruti" className="space-y-4 mt-4">
-            <HortifrutiOfertaTab
-              itensOferta={itensOferta.map(item => ({
-                ...item,
-                valor_caixa: 0,
-                quantidade_por_caixa: 1,
-                tipo_caixa: 'inteira' as const,
-                unidade_fracionamento: 'kg'
-              }))}
-              setItensOferta={(novosItens) => setItensOferta(novosItens.map(item => ({
-                item_id: item.item_id,
-                nome_item: item.nome_item,
-                preco_custo: item.preco_custo,
-                preco_venda_normal: item.preco_venda_normal,
-                preco_oferta: item.preco_oferta,
-                margem_lucro: item.margem_lucro,
-                lucro_real: item.lucro_real,
-                destaque: item.destaque
-              })))}
-            />
+            <div className="text-center mb-6">
+              <h2 className="text-xl md:text-2xl font-bold">Ofertas Hortifruti</h2>
+              <p className="text-muted-foreground mt-1">Escolha o método para criar suas ofertas</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              {/* Opção 1: Fracionamento Manual */}
+              <Card className="relative overflow-hidden border-2 hover:border-emerald-500 transition-colors cursor-pointer group">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">
+                      <Scale className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold mb-1">Fracionamento Manual</h3>
+                      <p className="text-sm text-muted-foreground mb-4">Usar tabela de fracionamento</p>
+                      
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                          Produtos pré-cadastrados em Sistema
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                          Calcula preço por kg/unidade
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                          Histórico de sessões
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                  <Button 
+                    className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => {
+                      setNovaOferta(prev => ({ ...prev, setor: 'hortifruti' }));
+                      setShowAddItemDialog(true);
+                      setFonteFilter('hortifruti');
+                    }}
+                  >
+                    Acessar <span className="ml-2">→</span>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Opção 2: Importar do Estoque */}
+              <Card className="relative overflow-hidden border-2 hover:border-green-500 transition-colors cursor-pointer group">
+                <Badge className="absolute top-4 right-4 bg-green-500 text-white">
+                  ⏱ Mais Rápido
+                </Badge>
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg">
+                      <Package className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold mb-1">Importar do Estoque</h3>
+                      <p className="text-sm text-muted-foreground mb-4">Fluxo rápido com sugestões</p>
+                      
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                          Importa do subgrupo HORTIFRUTI
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                          Custo já vem do sistema
+                        </li>
+                        <li className="flex items-center gap-2 text-green-600 font-medium">
+                          <Sparkles className="w-4 h-4" />
+                          Sugestão inteligente de preço
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                  <Button 
+                    className="w-full mt-6 bg-green-600 hover:bg-green-700"
+                    onClick={() => {
+                      setNovaOferta(prev => ({ ...prev, setor: 'hortifruti' }));
+                      setActiveTab('nova');
+                    }}
+                  >
+                    Começar <span className="ml-2">→</span>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Biblioteca de Itens */}
@@ -1108,9 +1176,23 @@ const Ofertas = () => {
             </Card>
           </TabsContent>
 
-          {/* Fracionamento Inteligente */}
-          <TabsContent value="fracionamento" className="mt-4">
-            <FracionamentoTab />
+          {/* Histórico de Ofertas */}
+          <TabsContent value="historico" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  Histórico de Ofertas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-muted-foreground">
+                  <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p className="font-medium">Histórico de ofertas anteriores</p>
+                  <p className="text-sm">Visualize ofertas passadas e analise o desempenho</p>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
