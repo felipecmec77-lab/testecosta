@@ -728,6 +728,60 @@ export type Database = {
           },
         ]
       }
+      itens_fracionamento: {
+        Row: {
+          config_id: string | null
+          criado_em: string | null
+          id: string
+          margem_aplicada: number | null
+          preco_caixa: number
+          preco_custo_kg: number | null
+          preco_custo_un: number | null
+          preco_venda_kg: number | null
+          preco_venda_un: number | null
+          sessao_id: string | null
+        }
+        Insert: {
+          config_id?: string | null
+          criado_em?: string | null
+          id?: string
+          margem_aplicada?: number | null
+          preco_caixa: number
+          preco_custo_kg?: number | null
+          preco_custo_un?: number | null
+          preco_venda_kg?: number | null
+          preco_venda_un?: number | null
+          sessao_id?: string | null
+        }
+        Update: {
+          config_id?: string | null
+          criado_em?: string | null
+          id?: string
+          margem_aplicada?: number | null
+          preco_caixa?: number
+          preco_custo_kg?: number | null
+          preco_custo_un?: number | null
+          preco_venda_kg?: number | null
+          preco_venda_un?: number | null
+          sessao_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_fracionamento_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "configuracoes_fracionamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "itens_fracionamento_sessao_id_fkey"
+            columns: ["sessao_id"]
+            isOneToOne: false
+            referencedRelation: "sessoes_fracionamento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       itens_oferta: {
         Row: {
           criado_em: string | null
@@ -1862,6 +1916,36 @@ export type Database = {
           id?: string
           numero?: number
           observacao?: string | null
+          usuario_id?: string
+        }
+        Relationships: []
+      }
+      sessoes_fracionamento: {
+        Row: {
+          criado_em: string | null
+          data_sessao: string
+          finalizado_em: string | null
+          id: string
+          observacao: string | null
+          status: string | null
+          usuario_id: string
+        }
+        Insert: {
+          criado_em?: string | null
+          data_sessao?: string
+          finalizado_em?: string | null
+          id?: string
+          observacao?: string | null
+          status?: string | null
+          usuario_id: string
+        }
+        Update: {
+          criado_em?: string | null
+          data_sessao?: string
+          finalizado_em?: string | null
+          id?: string
+          observacao?: string | null
+          status?: string | null
           usuario_id?: string
         }
         Relationships: []
