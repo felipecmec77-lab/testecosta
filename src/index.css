@@ -1,0 +1,243 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Fresh produce-inspired palette */
+    --background: 120 20% 98%;
+    --foreground: 150 30% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 150 30% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 30% 10%;
+
+    /* Fresh green - like leafy vegetables */
+    --primary: 152 60% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Warm orange - like ripe fruits */
+    --secondary: 35 100% 50%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 120 15% 94%;
+    --muted-foreground: 150 10% 45%;
+
+    /* Accent - softer green */
+    --accent: 152 40% 92%;
+    --accent-foreground: 152 60% 30%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 120 15% 88%;
+    --input: 120 15% 88%;
+    --ring: 152 60% 40%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens */
+    --success: 152 60% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 45 100% 50%;
+    --warning-foreground: 45 100% 15%;
+    --info: 200 80% 50%;
+    --info-foreground: 0 0% 100%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(152, 60%, 40%) 0%, hsl(152, 70%, 35%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(35, 100%, 50%) 0%, hsl(25, 100%, 45%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(152, 60%, 35%) 0%, hsl(180, 50%, 30%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(120, 20%, 98%) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(150 30% 10% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(150 30% 10% / 0.1), 0 2px 4px -2px hsl(150 30% 10% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(150 30% 10% / 0.1), 0 4px 6px -4px hsl(150 30% 10% / 0.1);
+    --shadow-glow: 0 0 30px hsl(152 60% 40% / 0.2);
+
+    /* Sidebar - Dark blue like Gestio */
+    --sidebar-background: 220 30% 15%;
+    --sidebar-foreground: 220 20% 95%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 25% 22%;
+    --sidebar-accent-foreground: 220 20% 95%;
+    --sidebar-border: 220 25% 20%;
+    --sidebar-ring: 217 91% 60%;
+  }
+
+  .dark {
+    --background: 150 30% 8%;
+    --foreground: 120 20% 95%;
+
+    --card: 150 25% 12%;
+    --card-foreground: 120 20% 95%;
+
+    --popover: 150 25% 12%;
+    --popover-foreground: 120 20% 95%;
+
+    --primary: 152 60% 50%;
+    --primary-foreground: 150 30% 8%;
+
+    --secondary: 35 100% 55%;
+    --secondary-foreground: 35 100% 10%;
+
+    --muted: 150 20% 18%;
+    --muted-foreground: 150 15% 60%;
+
+    --accent: 152 30% 20%;
+    --accent-foreground: 152 60% 70%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 150 20% 20%;
+    --input: 150 20% 20%;
+    --ring: 152 60% 50%;
+
+    /* Sidebar dark mode - even darker */
+    --sidebar-background: 220 30% 8%;
+    --sidebar-foreground: 220 20% 95%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 25% 15%;
+    --sidebar-accent-foreground: 220 20% 95%;
+    --sidebar-border: 220 25% 12%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-secondary {
+    background: var(--gradient-secondary);
+  }
+
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Heartbeat animation for attention cards */
+@keyframes heartbeat {
+  0% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.08);
+  }
+  30% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.05);
+  }
+  60% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Word break utilities for long text */
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
