@@ -28,9 +28,6 @@ interface ConfigFracionamento {
   nome_produto: string;
   peso_caixa_kg: number;
   unidades_por_caixa: number;
-  preco_caixa: number;
-  preco_por_kg: number;
-  preco_por_unidade: number;
   peso_medio_unidade_kg: number | null;
   tipo_venda: 'kg' | 'unidade' | 'ambos';
   observacao: string | null;
@@ -61,7 +58,6 @@ export function FracionamentoManager() {
     nome_produto: '',
     peso_caixa_kg: '',
     unidades_por_caixa: '',
-    preco_caixa: '',
     peso_medio_unidade_kg: '',
     tipo_venda: 'kg' as 'kg' | 'unidade' | 'ambos',
     observacao: ''
@@ -113,7 +109,6 @@ export function FracionamentoManager() {
       nome_produto: '',
       peso_caixa_kg: '',
       unidades_por_caixa: '',
-      preco_caixa: '',
       peso_medio_unidade_kg: '',
       tipo_venda: 'kg',
       observacao: ''
@@ -133,7 +128,6 @@ export function FracionamentoManager() {
       nome_produto: config.nome_produto,
       peso_caixa_kg: config.peso_caixa_kg.toString(),
       unidades_por_caixa: config.unidades_por_caixa.toString(),
-      preco_caixa: config.preco_caixa.toString().replace('.', ','),
       peso_medio_unidade_kg: config.peso_medio_unidade_kg?.toString() || '',
       tipo_venda: config.tipo_venda,
       observacao: config.observacao || ''
@@ -151,17 +145,6 @@ export function FracionamentoManager() {
     setSearchProduto('');
   };
 
-  const calcularPrecos = () => {
-    const peso = parseFloat(form.peso_caixa_kg) || 0;
-    const unidades = parseInt(form.unidades_por_caixa) || 0;
-    const preco = parseFloat(form.preco_caixa.replace(',', '.')) || 0;
-
-    const precoPorKg = peso > 0 ? preco / peso : 0;
-    const precoPorUnidade = unidades > 0 ? preco / unidades : 0;
-
-    return { precoPorKg, precoPorUnidade };
-  };
-
   const handleSave = async () => {
     if (!form.nome_produto.trim()) {
       toast.error('Nome do produto é obrigatório');
@@ -170,15 +153,9 @@ export function FracionamentoManager() {
 
     const peso = parseFloat(form.peso_caixa_kg) || 0;
     const unidades = parseInt(form.unidades_por_caixa) || 0;
-    const preco = parseFloat(form.preco_caixa.replace(',', '.')) || 0;
 
     if (peso <= 0 && unidades <= 0) {
       toast.error('Informe o peso da caixa ou quantidade de unidades');
-      return;
-    }
-
-    if (preco <= 0) {
-      toast.error('Informe o preço da caixa');
       return;
     }
 
@@ -189,7 +166,6 @@ export function FracionamentoManager() {
         nome_produto: form.nome_produto,
         peso_caixa_kg: peso,
         unidades_por_caixa: unidades,
-        preco_caixa: preco,
         peso_medio_unidade_kg: parseFloat(form.peso_medio_unidade_kg) || null,
         tipo_venda: form.tipo_venda,
         observacao: form.observacao || null,
@@ -255,7 +231,7 @@ export function FracionamentoManager() {
     p.codigo.toLowerCase().includes(searchProduto.toLowerCase())
   ).slice(0, 10);
 
-  const { precoPorKg, precoPorUnidade } = calcularPrecos();
+  
 
   if (loading) {
     return (
@@ -311,26 +287,16 @@ export function FracionamentoManager() {
                   <TableHead>Produto</TableHead>
                   <TableHead className="text-right">Peso Caixa</TableHead>
                   <TableHead className="text-right">Unidades</TableHead>
-                  <TableHead className="text-right">Preço Caixa</TableHead>
-                  <TableHead className="text-right">R$/kg</TableHead>
-                  <TableHead className="text-right">R$/un</TableHead>
                   <TableHead>Tipo Venda</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredConfigs.map((config) => (
+              {filteredConfigs.map((config) => (
                   <TableRow key={config.id}>
                     <TableCell className="font-medium">{config.nome_produto}</TableCell>
                     <TableCell className="text-right">{config.peso_caixa_kg} kg</TableCell>
                     <TableCell className="text-right">{config.unidades_por_caixa}</TableCell>
-                    <TableCell className="text-right">R$ {formatarPreco(config.preco_caixa)}</TableCell>
-                    <TableCell className="text-right font-bold text-primary">
-                      R$ {formatarPreco(config.preco_por_kg)}
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-primary">
-                      R$ {formatarPreco(config.preco_por_unidade)}
-                    </TableCell>
                     <TableCell>
                       <Badge variant={config.tipo_venda === 'kg' ? 'default' : config.tipo_venda === 'unidade' ? 'secondary' : 'outline'}>
                         {config.tipo_venda === 'kg' ? 'Por Kg' : config.tipo_venda === 'unidade' ? 'Por Unidade' : 'Ambos'}
@@ -421,18 +387,6 @@ export function FracionamentoManager() {
               </div>
 
               <div className="space-y-2">
-                <Label>Preço da Caixa (R$)</Label>
-                <Input
-                  placeholder="Ex: 89,90"
-                  value={form.preco_caixa}
-                  onChange={(e) => {
-                    let val = e.target.value.replace(/[^\d,]/g, '');
-                    setForm(prev => ({ ...prev, preco_caixa: val }));
-                  }}
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label>Peso Médio por Unidade (kg) - opcional</Label>
                 <Input
                   type="number"
@@ -462,26 +416,21 @@ export function FracionamentoManager() {
                 </Select>
               </div>
 
-              {/* Preview dos cálculos */}
-              {(parseFloat(form.preco_caixa.replace(',', '.')) > 0) && (
-                <div className="p-4 bg-muted rounded-lg space-y-2">
-                  <p className="text-sm font-medium">Cálculo automático:</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Preço por Kg</p>
-                      <p className="text-lg font-bold text-primary">
-                        R$ {formatarPreco(precoPorKg)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Preço por Unidade</p>
-                      <p className="text-lg font-bold text-primary">
-                        R$ {formatarPreco(precoPorUnidade)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label>Observação</Label>
+                <Input
+                  placeholder="Observações sobre o produto"
+                  value={form.observacao}
+                  onChange={(e) => setForm(prev => ({ ...prev, observacao: e.target.value }))}
+                />
+              </div>
+
+              <div className="p-4 bg-muted/50 rounded-lg border border-dashed">
+                <p className="text-sm text-muted-foreground">
+                  💡 O preço da caixa será informado no momento do fracionamento, 
+                  na tela de Ofertas → Fracionamento
+                </p>
+              </div>
             </div>
 
             <DialogFooter>

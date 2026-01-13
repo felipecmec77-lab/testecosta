@@ -2,107 +2,128 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { 
-  Search, 
   Loader2, 
   Scale,
-  Calculator,
-  Box,
-  Settings,
-  ArrowRight
+  Play,
+  History,
+  Calendar,
+  User,
+  ChevronDown,
+  ChevronUp,
+  Eye
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { IniciarFracionamento } from './IniciarFracionamento';
 
-interface ConfigFracionamento {
+interface SessaoFracionamento {
   id: string;
-  produto_id: string | null;
-  nome_produto: string;
-  peso_caixa_kg: number;
-  unidades_por_caixa: number;
-  preco_caixa: number;
-  preco_por_kg: number;
-  preco_por_unidade: number;
-  peso_medio_unidade_kg: number | null;
-  tipo_venda: 'kg' | 'unidade' | 'ambos';
+  data_sessao: string;
+  usuario_id: string;
+  status: string;
   observacao: string | null;
-  ativo: boolean;
+  criado_em: string;
+  finalizado_em: string | null;
 }
 
-interface FracionamentoCalculado extends ConfigFracionamento {
-  margem_sugerida_kg: number;
-  margem_sugerida_un: number;
-  preco_venda_kg: number;
-  preco_venda_un: number;
+interface ItemFracionamento {
+  id: string;
+  sessao_id: string;
+  config_id: string;
+  preco_caixa: number;
+  preco_custo_kg: number | null;
+  preco_custo_un: number | null;
+  preco_venda_kg: number | null;
+  preco_venda_un: number | null;
+  margem_aplicada: number;
+  config?: {
+    nome_produto: string;
+    peso_caixa_kg: number;
+    unidades_por_caixa: number;
+  };
 }
 
 export function FracionamentoTab() {
-  const [configs, setConfigs] = useState<FracionamentoCalculado[]>([]);
+  const [sessoes, setSessoes] = useState<SessaoFracionamento[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [margemPadrao, setMargemPadrao] = useState('30');
+  const [modo, setModo] = useState<'historico' | 'iniciar'>('historico');
+  const [sessaoExpandida, setSessaoExpandida] = useState<string | null>(null);
+  const [itensSessao, setItensSessao] = useState<Record<string, ItemFracionamento[]>>({});
+  const [loadingItens, setLoadingItens] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchConfigs();
+    fetchSessoes();
   }, []);
 
-  const fetchConfigs = async () => {
+  const fetchSessoes = async () => {
     try {
       const { data, error } = await supabase
-        .from('configuracoes_fracionamento')
+        .from('sessoes_fracionamento')
         .select('*')
-        .eq('ativo', true)
-        .order('nome_produto');
+        .order('data_sessao', { ascending: false })
+        .limit(20);
 
       if (error) throw error;
-      
-      // Calcular preços de venda com margem padrão
-      const margem = parseFloat(margemPadrao) / 100;
-      const calculados = (data || []).map(d => {
-        const config = {
-          ...d,
-          tipo_venda: d.tipo_venda as 'kg' | 'unidade' | 'ambos'
-        };
-        return {
-          ...config,
-          margem_sugerida_kg: margem * 100,
-          margem_sugerida_un: margem * 100,
-          preco_venda_kg: config.preco_por_kg * (1 + margem),
-          preco_venda_un: config.preco_por_unidade * (1 + margem)
-        };
-      });
-      
-      setConfigs(calculados);
+      setSessoes(data || []);
     } catch (error) {
-      console.error('Erro ao carregar configurações:', error);
-      toast.error('Erro ao carregar dados de fracionamento');
+      console.error('Erro ao carregar sessões:', error);
+      toast.error('Erro ao carregar histórico');
     } finally {
       setLoading(false);
     }
   };
 
-  const recalcularPrecos = () => {
-    const margem = parseFloat(margemPadrao) / 100;
-    setConfigs(prev => prev.map(config => ({
-      ...config,
-      margem_sugerida_kg: margem * 100,
-      margem_sugerida_un: margem * 100,
-      preco_venda_kg: config.preco_por_kg * (1 + margem),
-      preco_venda_un: config.preco_por_unidade * (1 + margem)
-    })));
-    toast.success('Preços recalculados!');
+  const fetchItensSessao = async (sessaoId: string) => {
+    if (itensSessao[sessaoId]) {
+      // Já tem os itens carregados, só toggle
+      setSessaoExpandida(sessaoExpandida === sessaoId ? null : sessaoId);
+      return;
+    }
+
+    setLoadingItens(sessaoId);
+    try {
+      const { data, error } = await supabase
+        .from('itens_fracionamento')
+        .select(`
+          *,
+          config:config_id (
+            nome_produto,
+            peso_caixa_kg,
+            unidades_por_caixa
+          )
+        `)
+        .eq('sessao_id', sessaoId);
+
+      if (error) throw error;
+      
+      setItensSessao(prev => ({
+        ...prev,
+        [sessaoId]: (data || []).map(item => ({
+          ...item,
+          config: item.config as unknown as ItemFracionamento['config']
+        }))
+      }));
+      setSessaoExpandida(sessaoId);
+    } catch (error) {
+      console.error('Erro ao carregar itens:', error);
+      toast.error('Erro ao carregar detalhes');
+    } finally {
+      setLoadingItens(null);
+    }
   };
 
-  const formatarPreco = (valor: number) => {
+  const formatarPreco = (valor: number | null) => {
+    if (valor === null) return '-';
     return valor.toFixed(2).replace('.', ',');
   };
 
-  const filteredConfigs = configs.filter(c =>
-    c.nome_produto.toLowerCase().includes(search.toLowerCase())
-  );
+  const formatarData = (data: string) => {
+    return format(new Date(data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  };
 
   if (loading) {
     return (
@@ -112,130 +133,158 @@ export function FracionamentoTab() {
     );
   }
 
-  if (configs.length === 0) {
+  if (modo === 'iniciar') {
     return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="text-center space-y-4">
-            <Box className="w-16 h-16 mx-auto text-muted-foreground opacity-50" />
-            <div>
-              <h3 className="text-lg font-semibold">Nenhum produto configurado</h3>
-              <p className="text-muted-foreground text-sm mt-1">
-                Configure os dados de fracionamento nas Configurações do Sistema
-              </p>
-            </div>
-            <Button asChild>
-              <Link to="/sistema">
-                <Settings className="w-4 h-4 mr-2" />
-                Ir para Configurações
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            setModo('historico');
+            fetchSessoes();
+          }}
+        >
+          <History className="w-4 h-4 mr-2" />
+          Ver Histórico
+        </Button>
+        <IniciarFracionamento onVoltar={() => {
+          setModo('historico');
+          fetchSessoes();
+        }} />
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {/* Header com ação */}
+      <Card>
+        <CardContent className="py-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+                <Scale className="w-7 h-7 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Fracionamento</h2>
+                <p className="text-muted-foreground text-sm">
+                  Calcule preços de venda baseado nos custos das caixas
+                </p>
+              </div>
+            </div>
+            <Button size="lg" onClick={() => setModo('iniciar')}>
+              <Play className="w-5 h-5 mr-2" />
+              INICIAR FRACIONAMENTO
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Histórico de sessões */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Scale className="w-5 h-5" />
-            Fracionamento Inteligente
+            <History className="w-5 h-5" />
+            Histórico de Fracionamentos
           </CardTitle>
           <CardDescription>
-            Visualize os preços calculados automaticamente baseado nos dados da caixa
+            Últimas sessões de fracionamento realizadas
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Controles */}
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar produto..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
+        <CardContent>
+          {sessoes.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Scale className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhum fracionamento realizado</p>
+              <p className="text-sm">Clique em "Iniciar Fracionamento" para começar</p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Margem:</span>
-              <Input
-                type="number"
-                value={margemPadrao}
-                onChange={(e) => setMargemPadrao(e.target.value)}
-                className="w-20"
-              />
-              <span className="text-sm text-muted-foreground">%</span>
-              <Button onClick={recalcularPrecos} size="sm">
-                <Calculator className="w-4 h-4 mr-2" />
-                Aplicar
-              </Button>
+          ) : (
+            <div className="space-y-3">
+              {sessoes.map((sessao) => {
+                const isExpanded = sessaoExpandida === sessao.id;
+                const itens = itensSessao[sessao.id] || [];
+                
+                return (
+                  <div key={sessao.id} className="border rounded-lg overflow-hidden">
+                    <button
+                      className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                      onClick={() => fetchItensSessao(sessao.id)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar className="w-4 h-4" />
+                          <span>{formatarData(sessao.criado_em)}</span>
+                        </div>
+                        <Badge variant={sessao.status === 'finalizada' ? 'default' : 'secondary'}>
+                          {sessao.status === 'finalizada' ? 'Finalizada' : 'Em andamento'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {loadingItens === sessao.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : isExpanded ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </div>
+                    </button>
+                    
+                    {isExpanded && itens.length > 0 && (
+                      <div className="border-t bg-muted/30 p-4">
+                        {sessao.observacao && (
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Obs: {sessao.observacao}
+                          </p>
+                        )}
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Produto</TableHead>
+                                <TableHead className="text-right">Caixa</TableHead>
+                                <TableHead className="text-right">Custo/kg</TableHead>
+                                <TableHead className="text-right">Venda/kg</TableHead>
+                                <TableHead className="text-right">Custo/un</TableHead>
+                                <TableHead className="text-right">Venda/un</TableHead>
+                                <TableHead className="text-right">Margem</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {itens.map((item) => (
+                                <TableRow key={item.id}>
+                                  <TableCell className="font-medium">
+                                    {item.config?.nome_produto || 'Produto removido'}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    R$ {formatarPreco(item.preco_caixa)}
+                                  </TableCell>
+                                  <TableCell className="text-right text-muted-foreground">
+                                    R$ {formatarPreco(item.preco_custo_kg)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-bold text-primary">
+                                    R$ {formatarPreco(item.preco_venda_kg)}
+                                  </TableCell>
+                                  <TableCell className="text-right text-muted-foreground">
+                                    R$ {formatarPreco(item.preco_custo_un)}
+                                  </TableCell>
+                                  <TableCell className="text-right font-bold text-primary">
+                                    R$ {formatarPreco(item.preco_venda_un)}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    R$ {formatarPreco(item.margem_aplicada)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          </div>
-
-          {/* Tabela */}
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Produto</TableHead>
-                  <TableHead className="text-right">Peso Caixa</TableHead>
-                  <TableHead className="text-right">Preço Caixa</TableHead>
-                  <TableHead className="text-right">Custo/kg</TableHead>
-                  <TableHead className="text-right">Custo/un</TableHead>
-                  <TableHead className="text-right">Venda/kg</TableHead>
-                  <TableHead className="text-right">Venda/un</TableHead>
-                  <TableHead>Tipo Venda</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredConfigs.map((config) => (
-                  <TableRow key={config.id}>
-                    <TableCell className="font-medium">{config.nome_produto}</TableCell>
-                    <TableCell className="text-right">{config.peso_caixa_kg} kg</TableCell>
-                    <TableCell className="text-right">R$ {formatarPreco(config.preco_caixa)}</TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      R$ {formatarPreco(config.preco_por_kg)}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      R$ {formatarPreco(config.preco_por_unidade)}
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-primary">
-                      R$ {formatarPreco(config.preco_venda_kg)}
-                    </TableCell>
-                    <TableCell className="text-right font-bold text-primary">
-                      R$ {formatarPreco(config.preco_venda_un)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        config.tipo_venda === 'kg' ? 'default' : 
-                        config.tipo_venda === 'unidade' ? 'secondary' : 
-                        'outline'
-                      }>
-                        {config.tipo_venda === 'kg' ? 'Por Kg' : 
-                         config.tipo_venda === 'unidade' ? 'Por Unidade' : 
-                         'Ambos'}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Link para configurações */}
-          <div className="flex justify-end">
-            <Button variant="outline" asChild>
-              <Link to="/sistema">
-                <Settings className="w-4 h-4 mr-2" />
-                Gerenciar Configurações
-              </Link>
-            </Button>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>
