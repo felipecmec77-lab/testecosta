@@ -96,7 +96,11 @@ const Hortifruti = () => {
           launchesData.map(async (launch) => {
             const { data: perdasData } = await supabase
               .from('perdas')
-              .select('valor_perda, peso_perdido, quantidade_perdida')
+              .select(`
+                peso_perdido, 
+                quantidade_perdida,
+                estoque!perdas_produto_id_estoque_fkey(preco_custo, unidade)
+              `)
               .eq('lancamento_id', launch.id);
 
             const { data: profileData } = await supabase
@@ -105,14 +109,29 @@ const Hortifruti = () => {
               .eq('id', launch.usuario_id)
               .single();
 
-            const totalPeso = perdasData?.reduce((acc, p) => acc + (p.peso_perdido || 0), 0) || 0;
-            const totalQtd = perdasData?.reduce((acc, p) => acc + (p.quantidade_perdida || 0), 0) || 0;
+            // Calculate totals correctly
+            let totalPeso = 0;
+            let totalQtd = 0;
+            let totalValue = 0;
+
+            perdasData?.forEach((p: any) => {
+              const isKg = p.estoque?.unidade?.toLowerCase() === 'kg';
+              const qty = isKg ? (p.peso_perdido || 0) : (p.quantidade_perdida || 0);
+              
+              if (isKg) {
+                totalPeso += qty;
+              } else {
+                totalQtd += qty;
+              }
+              
+              totalValue += qty * (p.estoque?.preco_custo || 0);
+            });
 
             return {
               ...launch,
               profiles: profileData || undefined,
               items_count: perdasData?.length || 0,
-              total_value: perdasData?.reduce((acc, p) => acc + (p.valor_perda || 0), 0) || 0,
+              total_value: totalValue,
               total_peso: totalPeso,
               total_quantidade: totalQtd,
             } as Launch;
