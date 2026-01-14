@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { GripVertical, Settings, Save, RotateCcw, Building2, Palette, ImageIcon, Loader2, Upload, Trash2, Package, Eye, EyeOff, Truck, Scale } from 'lucide-react';
+import { GripVertical, Settings, Save, RotateCcw, Building2, Palette, ImageIcon, Loader2, Upload, Trash2, Package, Eye, EyeOff, Truck, Scale, LogIn } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -31,6 +31,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { FornecedoresManager } from '@/components/sistema/FornecedoresManager';
 import { FracionamentoManager } from '@/components/sistema/FracionamentoManager';
+import { LoginConfigManager } from '@/components/sistema/LoginConfigManager';
 
 interface SidebarItem {
   id: string;
@@ -432,10 +433,14 @@ const Sistema = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="sidebar" className="flex items-center gap-2">
               <GripVertical className="w-4 h-4" />
               <span className="hidden sm:inline">Sidebar</span>
+            </TabsTrigger>
+            <TabsTrigger value="login" className="flex items-center gap-2">
+              <LogIn className="w-4 h-4" />
+              <span className="hidden sm:inline">Login</span>
             </TabsTrigger>
             <TabsTrigger value="fornecedores" className="flex items-center gap-2">
               <Truck className="w-4 h-4" />
@@ -513,6 +518,11 @@ const Sistema = () => {
                 </DndContext>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* LOGIN TAB */}
+          <TabsContent value="login">
+            <LoginConfigManager />
           </TabsContent>
 
           {/* FORNECEDORES TAB */}

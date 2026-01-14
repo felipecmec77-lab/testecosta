@@ -680,7 +680,7 @@ const Ofertas = () => {
             }`}
           >
             <Leaf className="w-6 h-6 mb-1" />
-            <span className="text-xs md:text-sm font-medium">HORTI</span>
+            <span className="text-xs md:text-sm font-medium">HORTIFRUTI</span>
           </button>
           <button
             onClick={() => setActiveTab('salvas')}

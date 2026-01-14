@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       throw new Error('Apenas administradores podem criar usuários')
     }
 
-    const { email, password, nome, role } = await req.json()
+    const { email, password, nome, role, username } = await req.json()
 
     if (!email || !password || !nome || !role) {
       throw new Error('Email, senha, nome e perfil são obrigatórios')
@@ -57,6 +57,14 @@ Deno.serve(async (req) => {
 
     if (createError) {
       throw new Error(createError.message)
+    }
+
+    // Se tiver username, atualizar o profile
+    if (username && userData.user) {
+      await supabaseAdmin
+        .from('profiles')
+        .update({ username })
+        .eq('id', userData.user.id)
     }
 
     return new Response(
