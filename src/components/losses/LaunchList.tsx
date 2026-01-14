@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { FileText, Eye, XCircle, Loader2, Calendar, User, Package } from 'lucide-react';
+import { FileText, Eye, XCircle, Loader2, Calendar, User, Package, Trash2, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import LaunchDetail from './LaunchDetail';
@@ -49,11 +49,17 @@ interface LaunchListProps {
 
 const LaunchList = ({ launches, onRefresh }: LaunchListProps) => {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedLaunch, setSelectedLaunch] = useState<Launch | null>(null);
   const { toast } = useToast();
   const { userRole } = useAuth();
 
   const isAdmin = userRole === 'administrador';
+
+  // Filtrar lançamentos com valor > 0 OU itens > 0
+  const filteredLaunches = launches.filter(launch => 
+    (launch.total_value && launch.total_value > 0) || (launch.items_count && launch.items_count > 0)
+  );
 
   const handleCancel = async (launch: Launch) => {
     setCancellingId(launch.id);
@@ -96,6 +102,39 @@ const LaunchList = ({ launches, onRefresh }: LaunchListProps) => {
     }
   };
 
+  const handleDelete = async (launch: Launch) => {
+    setDeletingId(launch.id);
+
+    try {
+      // First delete associated perdas
+      const { error: perdasError } = await supabase
+        .from('perdas')
+        .delete()
+        .eq('lancamento_id', launch.id);
+
+      if (perdasError) throw perdasError;
+
+      // Then delete the launch
+      const { error } = await supabase
+        .from('lancamentos')
+        .delete()
+        .eq('id', launch.id);
+
+      if (error) throw error;
+
+      toast({ title: 'Lançamento excluído com sucesso!' });
+      onRefresh();
+    } catch (error: any) {
+      toast({ 
+        title: 'Erro ao excluir lançamento', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <>
       <Card>
@@ -113,7 +152,7 @@ const LaunchList = ({ launches, onRefresh }: LaunchListProps) => {
             </div>
           ) : (
             <div className="space-y-3">
-              {launches.map(launch => (
+              {filteredLaunches.map(launch => (
                 <div 
                   key={launch.id} 
                   className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
@@ -172,42 +211,80 @@ const LaunchList = ({ launches, onRefresh }: LaunchListProps) => {
                     </Button>
 
                     {isAdmin && launch.status === 'normal' && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            disabled={cancellingId === launch.id}
-                            title="Cancelar lançamento"
-                          >
-                            {cancellingId === launch.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <XCircle className="w-4 h-4" />
-                            )}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Cancelar lançamento #{launch.numero}?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta ação irá cancelar o lançamento e restaurar o estoque dos produtos. 
-                              O lançamento permanecerá registrado com status "Cancelado" e não será 
-                              contabilizado nos relatórios.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Voltar</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => handleCancel(launch)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      <>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              disabled={cancellingId === launch.id}
+                              title="Cancelar lançamento"
                             >
-                              Cancelar Lançamento
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                              {cancellingId === launch.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <XCircle className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Cancelar lançamento #{launch.numero}?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação irá cancelar o lançamento e restaurar o estoque dos produtos. 
+                                O lançamento permanecerá registrado com status "Cancelado" e não será 
+                                contabilizado nos relatórios.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Voltar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleCancel(launch)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Cancelar Lançamento
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              disabled={deletingId === launch.id}
+                              title="Excluir lançamento"
+                            >
+                              {deletingId === launch.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir lançamento #{launch.numero}?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação irá excluir permanentemente o lançamento e todos os itens associados. 
+                                Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Voltar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDelete(launch)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Excluir Lançamento
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </>
                     )}
                   </div>
                 </div>
