@@ -113,30 +113,32 @@ const OfertasPDF = ({ oferta, itens, onClose, forMarketing = false }: OfertasPDF
     const tableWidth = pageWidth - (margin * 2);
 
     if (forMarketing) {
-      tableHead = [['PRODUTO', 'OFERTA', 'MARGEM', '★']];
+      // Marketing PDF - sem coluna de margem
+      tableHead = [['PRODUTO', 'OFERTA', '★']];
       tableData = sortedItens.map(item => [
         item.nome_item.toUpperCase(),
         formatPrice(item.preco_oferta),
-        `${calcularMargemLucro(item.preco_custo, item.preco_oferta).toFixed(0)}%`,
         item.destaque ? '★' : ''
       ]);
     } else {
+      // PDF Interno - margem com precisão de 2 casas decimais, sem %
       tableHead = [['PRODUTO', 'CUSTO', 'OFERTA', 'MARGEM', '★']];
       tableData = sortedItens.map(item => [
         item.nome_item.toUpperCase(),
         formatPrice(item.preco_custo),
         formatPrice(item.preco_oferta),
-        `${calcularMargemLucro(item.preco_custo, item.preco_oferta).toFixed(0)}%`,
+        `${calcularMargemLucro(item.preco_custo, item.preco_oferta).toFixed(2)}`,
         item.destaque ? '★' : ''
       ]);
     }
 
     const columnStyles = forMarketing ? {
-      0: { cellWidth: tableWidth * 0.50, halign: 'left' as const },
-      1: { cellWidth: tableWidth * 0.22, halign: 'center' as const, fontStyle: 'bold' as const },
-      2: { cellWidth: tableWidth * 0.18, halign: 'center' as const },
-      3: { cellWidth: tableWidth * 0.10, halign: 'center' as const }
+      // Marketing: 3 colunas (sem margem)
+      0: { cellWidth: tableWidth * 0.60, halign: 'left' as const },
+      1: { cellWidth: tableWidth * 0.28, halign: 'center' as const, fontStyle: 'bold' as const },
+      2: { cellWidth: tableWidth * 0.12, halign: 'center' as const }
     } : {
+      // Interno: 5 colunas (com margem)
       0: { cellWidth: tableWidth * 0.40, halign: 'left' as const },
       1: { cellWidth: tableWidth * 0.15, halign: 'center' as const },
       2: { cellWidth: tableWidth * 0.18, halign: 'center' as const, fontStyle: 'bold' as const },
@@ -185,14 +187,13 @@ const OfertasPDF = ({ oferta, itens, onClose, forMarketing = false }: OfertasPDF
             data.cell.styles.textColor = [220, 38, 38];
           }
         }
-        // Green color for margin column
-        const marginColIndex = forMarketing ? 2 : 3;
-        if (data.section === 'body' && data.column.index === marginColIndex) {
+        // Green color for margin column (only for internal PDF)
+        if (!forMarketing && data.section === 'body' && data.column.index === 3) {
           data.cell.styles.textColor = [22, 163, 74];
           data.cell.styles.fontStyle = 'bold';
         }
         // Star column styling
-        const starColIndex = forMarketing ? 3 : 4;
+        const starColIndex = forMarketing ? 2 : 4;
         if (data.section === 'body' && data.column.index === starColIndex) {
           const cellText = data.cell.text.join('');
           if (cellText === '★') {
@@ -310,7 +311,7 @@ const OfertasPDF = ({ oferta, itens, onClose, forMarketing = false }: OfertasPDF
                 <th className="text-left py-1 font-bold">PRODUTO</th>
                 {!forMarketing && <th className="text-center py-1 font-bold">CUSTO</th>}
                 <th className="text-center py-1 font-bold">OFERTA</th>
-                <th className="text-center py-1 font-bold">MARGEM</th>
+                {!forMarketing && <th className="text-center py-1 font-bold">MARGEM</th>}
                 <th className="text-center py-1 font-bold w-10">★</th>
               </tr>
             </thead>
@@ -328,9 +329,11 @@ const OfertasPDF = ({ oferta, itens, onClose, forMarketing = false }: OfertasPDF
                   <td className="text-center py-1.5 font-bold text-gray-900">
                     R$ {item.preco_oferta.toFixed(2).replace('.', ',')}
                   </td>
-                  <td className="text-center py-1.5 font-bold text-green-600">
-                    {calcularMargemLucro(item.preco_custo, item.preco_oferta).toFixed(0)}%
-                  </td>
+                  {!forMarketing && (
+                    <td className="text-center py-1.5 font-bold text-green-600">
+                      {calcularMargemLucro(item.preco_custo, item.preco_oferta).toFixed(2)}
+                    </td>
+                  )}
                   <td className="text-center py-1.5 text-red-600 text-lg">
                     {item.destaque ? '★' : ''}
                   </td>
