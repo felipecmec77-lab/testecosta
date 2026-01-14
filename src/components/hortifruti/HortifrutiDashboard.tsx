@@ -18,10 +18,10 @@ interface LossData {
   quantidade_perdida: number;
   motivo_perda: string;
   data_perda: string;
-  produtos?: {
-    nome_produto: string;
-    preco_unitario: number;
-    unidade_medida: string;
+  estoque?: {
+    nome: string;
+    preco_custo: number;
+    unidade: string;
   };
 }
 
@@ -71,10 +71,10 @@ const HortifrutiDashboard = () => {
           motivo_perda,
           data_perda,
           lancamento_id,
-          produtos (
-            nome_produto,
-            preco_unitario,
-            unidade_medida
+          estoque (
+            nome,
+            preco_custo,
+            unidade
           ),
           lancamentos (
             status
@@ -121,9 +121,9 @@ const HortifrutiDashboard = () => {
     let totalValueMonth = 0;
 
     lossesData.forEach((loss: any) => {
-      const isKg = loss.produtos?.unidade_medida === 'kg';
+      const isKg = loss.estoque?.unidade === 'kg' || loss.estoque?.unidade === 'KG';
       const lossAmount = isKg ? (loss.peso_perdido || 0) : (loss.quantidade_perdida || 0);
-      const lossValue = lossAmount * (loss.produtos?.preco_unitario || 0);
+      const lossValue = lossAmount * (loss.estoque?.preco_custo || 0);
       
       // Este mês
       if (loss.data_perda >= monthStartStr) {
@@ -200,17 +200,17 @@ const HortifrutiDashboard = () => {
 
   // Prepare chart data
   const lossesByProductKg = losses
-    .filter(l => l.produtos?.unidade_medida === 'kg')
+    .filter(l => l.estoque?.unidade === 'kg' || l.estoque?.unidade === 'KG')
     .reduce((acc, loss) => {
-      const name = loss.produtos?.nome_produto || 'Desconhecido';
+      const name = loss.estoque?.nome || 'Desconhecido';
       acc[name] = (acc[name] || 0) + (loss.peso_perdido || 0);
       return acc;
     }, {} as Record<string, number>);
 
   const lossesByProductUnidade = losses
-    .filter(l => l.produtos?.unidade_medida === 'unidade')
+    .filter(l => l.estoque?.unidade !== 'kg' && l.estoque?.unidade !== 'KG')
     .reduce((acc, loss) => {
-      const name = loss.produtos?.nome_produto || 'Desconhecido';
+      const name = loss.estoque?.nome || 'Desconhecido';
       acc[name] = (acc[name] || 0) + (loss.quantidade_perdida || 0);
       return acc;
     }, {} as Record<string, number>);
@@ -236,7 +236,7 @@ const HortifrutiDashboard = () => {
     .map((item, index) => ({ ...item, fill: rankingColors[index] }));
 
   const lossesByDateKg = losses
-    .filter(l => l.produtos?.unidade_medida === 'kg')
+    .filter(l => l.estoque?.unidade === 'kg' || l.estoque?.unidade === 'KG')
     .reduce((acc, loss) => {
       const date = loss.data_perda;
       acc[date] = (acc[date] || 0) + (loss.peso_perdido || 0);
@@ -269,10 +269,10 @@ const HortifrutiDashboard = () => {
     let totalValue = 0;
     
     monthLosses.forEach(loss => {
-      const isKg = loss.produtos?.unidade_medida === 'kg';
+      const isKg = loss.estoque?.unidade === 'kg' || loss.estoque?.unidade === 'KG';
       const amount = isKg ? (loss.peso_perdido || 0) : (loss.quantidade_perdida || 0);
       totalKg += isKg ? amount : 0;
-      totalValue += amount * (loss.produtos?.preco_unitario || 0);
+      totalValue += amount * (loss.estoque?.preco_custo || 0);
     });
     
     monthlyData.push({
