@@ -90,10 +90,12 @@ export function FracionamentoManager() {
 
   const fetchProdutos = async () => {
     try {
+      // Filtrar apenas produtos do subgrupo HORTIFRUTI para fracionamento
       const { data, error } = await supabase
         .from('estoque')
-        .select('id, nome, codigo')
+        .select('id, nome, codigo, subgrupo')
         .eq('ativo', true)
+        .ilike('subgrupo', '%HORTIFRUTI%')
         .order('nome');
 
       if (error) throw error;
