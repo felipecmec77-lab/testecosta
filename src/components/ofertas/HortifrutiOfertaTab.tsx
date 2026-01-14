@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Search, Trash2, Star, Package, Settings, Calculator, Eye, EyeOff, Sparkles, Box, ArrowRight, Check, TrendingUp, DollarSign, History, FileText, Users } from 'lucide-react';
 import OfertasHortifrutiPDF from './OfertasHortifrutiPDF';
+import { searchMultiWord } from '@/lib/searchUtils';
 
 interface ProdutoHortifruti {
   id: string;
@@ -380,7 +381,7 @@ const HortifrutiOfertaTab = ({ itensOferta, setItensOferta }: HortifrutiOfertaTa
   };
 
   const filteredProdutos = produtos.filter(p => {
-    const matchesSearch = p.nome_produto.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = searchMultiWord(p.nome_produto, searchTerm);
     const matchesVisibility = mostrarOcultos || !p.oculto_ofertas;
     return matchesSearch && matchesVisibility;
   });

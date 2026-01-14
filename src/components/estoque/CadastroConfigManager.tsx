@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { searchMultiWord } from "@/lib/searchUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,7 +130,7 @@ const CadastroConfigManager = ({ items, isAdmin, onRefresh, open, onOpenChange }
   const filteredConfigItems = useMemo(() => {
     if (!searchQuery.trim()) return configItems;
     return configItems.filter(item => 
-      item.value.toLowerCase().includes(searchQuery.toLowerCase())
+      searchMultiWord(item.value, searchQuery)
     );
   }, [configItems, searchQuery]);
 

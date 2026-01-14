@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { searchAcrossFields } from "@/lib/searchUtils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -620,9 +621,7 @@ const CategoriesManager = ({ items, isAdmin, onRefresh }: CategoriesManagerProps
   const filteredSuggestions = useMemo(() => {
     return aiSuggestions.filter(suggestion => {
       // Search filter
-      const matchesSearch = !suggestionSearchQuery || 
-        suggestion.item.nome.toLowerCase().includes(suggestionSearchQuery.toLowerCase()) ||
-        suggestion.item.codigo.toLowerCase().includes(suggestionSearchQuery.toLowerCase());
+      const matchesSearch = searchAcrossFields([suggestion.item.nome, suggestion.item.codigo], suggestionSearchQuery);
       
       // Confidence filter
       let matchesConfidence = true;

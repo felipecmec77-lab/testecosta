@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Printer, Search, Tag, Plus, Minus, Trash2, Eye, QrCode, Palette } from 'lucide-react';
+import { searchAcrossFields } from '@/lib/searchUtils';
 import { LabelCanvasEditor, LabelElement } from './LabelCanvasEditor';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -155,10 +156,8 @@ const ThermalLabelGenerator = ({ items }: ThermalLabelGeneratorProps) => {
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return items.slice(0, 50);
     
-    const query = searchQuery.toLowerCase();
     return items.filter(item => 
-      item.codigo.toLowerCase().includes(query) ||
-      item.nome.toLowerCase().includes(query)
+      searchAcrossFields([item.codigo, item.nome], searchQuery)
     ).slice(0, 100);
   }, [items, searchQuery]);
 
