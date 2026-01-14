@@ -105,7 +105,7 @@ const DashboardGeral = () => {
       const monthAgo = format(subDays(today, 30), 'yyyy-MM-dd');
       const sixMonthsAgo = format(subMonths(today, 6), 'yyyy-MM-dd');
 
-      // Fetch hortifruti losses
+      // Fetch hortifruti losses - from estoque table
       const { data: hortifrutiLosses } = await supabase
         .from('perdas')
         .select(`
@@ -113,7 +113,7 @@ const DashboardGeral = () => {
           quantidade_perdida,
           data_perda,
           lancamento_id,
-          produtos (preco_unitario, unidade_medida),
+          estoque (preco_custo, unidade),
           lancamentos (status)
         `)
         .gte('data_perda', sixMonthsAgo);
@@ -163,9 +163,9 @@ const DashboardGeral = () => {
       // Calculate stats
       let hortiHoje = 0, hortiMes = 0, hortiValorMes = 0;
       filteredHortiLosses.forEach((loss: any) => {
-        const isKg = loss.produtos?.unidade_medida === 'kg';
+        const isKg = loss.estoque?.unidade === 'kg' || loss.estoque?.unidade === 'KG';
         const amount = isKg ? (loss.peso_perdido || 0) : (loss.quantidade_perdida || 0);
-        const value = amount * (loss.produtos?.preco_unitario || 0);
+        const value = amount * (loss.estoque?.preco_custo || 0);
         
         if (loss.data_perda === todayStr) hortiHoje += amount;
         if (loss.data_perda >= monthAgo) {
@@ -214,9 +214,9 @@ const DashboardGeral = () => {
         
         filteredHortiLosses.filter((l: any) => l.data_perda >= monthStart && l.data_perda <= monthEnd)
           .forEach((loss: any) => {
-            const isKg = loss.produtos?.unidade_medida === 'kg';
+            const isKg = loss.estoque?.unidade === 'kg' || loss.estoque?.unidade === 'KG';
             const amount = isKg ? (loss.peso_perdido || 0) : (loss.quantidade_perdida || 0);
-            hortiLoss += amount * (loss.produtos?.preco_unitario || 0);
+            hortiLoss += amount * (loss.estoque?.preco_custo || 0);
           });
         
         filteredSuperLosses.filter((l: any) => l.data_perda >= monthStart && l.data_perda <= monthEnd)
@@ -256,9 +256,9 @@ const DashboardGeral = () => {
         
         filteredHortiLosses.filter((l: any) => l.data_perda >= monthStart && l.data_perda <= monthEnd)
           .forEach((loss: any) => {
-            const isKg = loss.produtos?.unidade_medida === 'kg';
+            const isKg = loss.estoque?.unidade === 'kg' || loss.estoque?.unidade === 'KG';
             const amount = isKg ? (loss.peso_perdido || 0) : (loss.quantidade_perdida || 0);
-            hortiLoss += amount * (loss.produtos?.preco_unitario || 0);
+            hortiLoss += amount * (loss.estoque?.preco_custo || 0);
           });
         
         filteredSuperLosses.filter((l: any) => l.data_perda >= monthStart && l.data_perda <= monthEnd)
