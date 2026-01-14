@@ -61,7 +61,7 @@ const SelecionarProdutosModal = ({
   const [produtos, setProdutos] = useState<ProdutoEstoque[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedGrupo, setSelectedGrupo] = useState<string | null>(null);
+  
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
   const [showCarrinho, setShowCarrinho] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -73,7 +73,7 @@ const SelecionarProdutosModal = ({
       loadSubgruposOcultos();
       setCarrinho([]);
       setSearchTerm('');
-      setSelectedGrupo(null);
+      
     }
   }, [open]);
 
@@ -130,13 +130,6 @@ const SelecionarProdutosModal = ({
     }
   };
 
-  // Grupos únicos
-  const grupos = useMemo(() => {
-    const grps = produtos
-      .map(p => p.grupo)
-      .filter((g): g is string => !!g);
-    return [...new Set(grps)].sort();
-  }, [produtos]);
 
   // Subgrupos únicos
   const subgrupos = useMemo(() => {
@@ -154,10 +147,9 @@ const SelecionarProdutosModal = ({
         return false;
       }
       const matchSearch = searchAcrossFields([p.nome, p.codigo_barras, p.marca, p.grupo], searchTerm);
-      const matchGrupo = !selectedGrupo || p.grupo === selectedGrupo;
-      return matchSearch && matchGrupo;
+      return matchSearch;
     });
-  }, [produtos, searchTerm, selectedGrupo, subgruposOcultos]);
+  }, [produtos, searchTerm, subgruposOcultos]);
 
   // Funções do carrinho
   const addToCarrinho = (produto: ProdutoEstoque) => {
@@ -273,14 +265,6 @@ const SelecionarProdutosModal = ({
             <Button variant="outline" size="icon" className="shrink-0">
               <Barcode className="w-4 h-4" />
             </Button>
-            <Button 
-              variant={selectedGrupo ? 'default' : 'outline'} 
-              size="icon" 
-              className="shrink-0"
-              onClick={() => setSelectedGrupo(null)}
-            >
-              <Filter className="w-4 h-4" />
-            </Button>
             
             {/* Configuração de subgrupos ocultos */}
             <Popover>
@@ -328,30 +312,7 @@ const SelecionarProdutosModal = ({
                 </div>
               </PopoverContent>
             </Popover>
-          </div>
-
-          {/* Grupos */}
-          {grupos.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              <Badge 
-                variant={selectedGrupo === null ? 'default' : 'outline'}
-                className="cursor-pointer"
-                onClick={() => setSelectedGrupo(null)}
-              >
-                Todos
-              </Badge>
-              {grupos.map(grp => (
-                <Badge 
-                  key={grp}
-                  variant={selectedGrupo === grp ? 'default' : 'outline'}
-                  className="cursor-pointer"
-                  onClick={() => setSelectedGrupo(grp)}
-                >
-                  {grp}
-                </Badge>
-              ))}
-            </div>
-          )}
+        </div>
         </div>
 
         {/* Products List */}
