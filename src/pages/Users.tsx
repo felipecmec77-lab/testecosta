@@ -13,7 +13,8 @@ import CreateUserDialog from '@/components/users/CreateUserDialog';
 import UserPermissionsDialog from '@/components/users/UserPermissionsDialog';
 import UserProfileCard from '@/components/users/UserProfileCard';
 import UserPhotoUpload from '@/components/users/UserPhotoUpload';
-import { Users as UsersIcon, Loader2, Shield, ShieldCheck, Eye, Trash2 } from 'lucide-react';
+import EditUserDialog from '@/components/users/EditUserDialog';
+import { Users as UsersIcon, Loader2, Shield, ShieldCheck, Eye, Trash2, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -186,42 +187,57 @@ const Users = () => {
         {/* Current User Profile Card */}
         <UserProfileCard />
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <ShieldCheck className="w-5 h-5 text-primary" />
+        {/* Admin Only Section */}
+        {userRole !== 'administrador' ? (
+          <Card className="p-8">
+            <div className="flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Lock className="w-8 h-8 text-muted-foreground" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Administradores</p>
-                <p className="text-xl font-bold">{users.filter(u => u.role === 'administrador').length}</p>
-              </div>
+              <h3 className="text-lg font-semibold mb-2">Acesso Restrito</h3>
+              <p className="text-muted-foreground max-w-md">
+                Apenas administradores podem visualizar e gerenciar todos os usuários do sistema.
+              </p>
             </div>
           </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-secondary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Operadores</p>
-                <p className="text-xl font-bold">{users.filter(u => u.role === 'operador').length}</p>
-              </div>
+        ) : (
+          <>
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Administradores</p>
+                    <p className="text-xl font-bold">{users.filter(u => u.role === 'administrador').length}</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-secondary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Operadores</p>
+                    <p className="text-xl font-bold">{users.filter(u => u.role === 'operador').length}</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-info/10 flex items-center justify-center">
+                    <Eye className="w-5 h-5 text-info" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Visualizadores</p>
+                    <p className="text-xl font-bold">{users.filter(u => u.role === 'visualizador').length}</p>
+                  </div>
+                </div>
+              </Card>
             </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-info/10 flex items-center justify-center">
-                <Eye className="w-5 h-5 text-info" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Visualizadores</p>
-                <p className="text-xl font-bold">{users.filter(u => u.role === 'visualizador').length}</p>
-              </div>
-            </div>
-          </Card>
-        </div>
 
         {/* Users Table */}
         <Card>
@@ -341,7 +357,16 @@ const Users = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            {userRole === 'administrador' && user.id !== currentUser?.id && (
+                            {user.id !== currentUser?.id && (
+                              <EditUserDialog
+                                userId={user.id}
+                                currentName={user.nome}
+                                currentUsername={user.username || null}
+                                currentEmail={user.email}
+                                onUserUpdated={fetchUsers}
+                              />
+                            )}
+                            {user.id !== currentUser?.id && (
                               <UserPermissionsDialog
                                 userId={user.id}
                                 userName={user.nome}
@@ -356,6 +381,7 @@ const Users = () => {
                                     size="icon"
                                     className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                     disabled={deletingId === user.id}
+                                    title="Excluir usuário"
                                   >
                                     {deletingId === user.id ? (
                                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -392,7 +418,9 @@ const Users = () => {
               </Table>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+          </>
+        )}
       </div>
     </MainLayout>
   );
