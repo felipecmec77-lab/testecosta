@@ -833,13 +833,13 @@ const PerdasTab = ({ items }: PerdasTabProps) => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="dashboard" className="gap-2">
-            <BarChart3 className="w-4 h-4" />
-            <span className="hidden sm:inline">Dashboard</span>
-          </TabsTrigger>
           <TabsTrigger value="lancamento" className="gap-2">
             <Package className="w-4 h-4" />
             <span className="hidden sm:inline">Lançar</span>
+          </TabsTrigger>
+          <TabsTrigger value="dashboard" className="gap-2">
+            <BarChart3 className="w-4 h-4" />
+            <span className="hidden sm:inline">Dashboard</span>
           </TabsTrigger>
           <TabsTrigger value="historico" className="gap-2">
             <History className="w-4 h-4" />
