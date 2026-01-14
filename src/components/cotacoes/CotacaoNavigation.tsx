@@ -4,12 +4,10 @@ import {
   Building2, 
   FileText, 
   BarChart3, 
-  FileCheck,
-  Package,
-  History
+  FileCheck
 } from 'lucide-react';
 
-type TabValue = 'dashboard' | 'nova' | 'fornecedores' | 'produtos' | 'historico' | 'mapa' | 'ordens';
+type TabValue = 'dashboard' | 'nova' | 'fornecedores' | 'historico' | 'mapa' | 'ordens';
 
 interface CotacaoNavigationProps {
   activeTab: TabValue;
@@ -20,7 +18,6 @@ const navItems: { value: TabValue; label: string; icon: React.ElementType }[] = 
   { value: 'dashboard', label: 'DASHBOARD', icon: TrendingUp },
   { value: 'nova', label: 'NOVA COTAÇÃO', icon: ShoppingCart },
   { value: 'fornecedores', label: 'FORNECEDORES', icon: Building2 },
-  { value: 'produtos', label: 'PRODUTOS', icon: Package },
   { value: 'historico', label: 'COTAÇÕES', icon: FileText },
   { value: 'mapa', label: 'MAPA DE PREÇOS', icon: BarChart3 },
   { value: 'ordens', label: 'ORDENS', icon: FileCheck },
@@ -28,7 +25,7 @@ const navItems: { value: TabValue; label: string; icon: React.ElementType }[] = 
 
 const CotacaoNavigation = ({ activeTab, onTabChange }: CotacaoNavigationProps) => {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3">
       {navItems.map((item) => {
         const Icon = item.icon;
         return (
