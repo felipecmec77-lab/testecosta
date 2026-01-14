@@ -182,7 +182,7 @@ const TIPOS_RESOLUCAO = [
 
 const PerdasTab = ({ items }: PerdasTabProps) => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("lancamento");
   const [tipoLancamento, setTipoLancamento] = useState<"perda" | "consumo">("perda");
   const receiptRef = useRef<HTMLDivElement>(null);
 
@@ -1107,22 +1107,22 @@ const PerdasTab = ({ items }: PerdasTabProps) => {
                 )}
               </div>
 
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => searchProduct()}
-                  disabled={searchingProduct || searchInput.length < 2}
-                  className="flex-1 h-11 gap-2 font-semibold"
-                >
-                  <Search className="w-5 h-5" />
-                  BUSCAR
-                </Button>
+              <div className="flex flex-col gap-2">
                 <Button
                   variant="outline"
                   onClick={() => setShowScanner(true)}
-                  className="h-11 gap-2"
+                  className="w-full h-12 gap-2 font-semibold bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600"
                 >
                   <Camera className="w-5 h-5" />
-                  SCAN
+                  ESCANEAR CÓDIGO
+                </Button>
+                <Button
+                  onClick={() => searchProduct()}
+                  disabled={searchingProduct || searchInput.length < 2}
+                  className="w-full h-12 gap-2 font-semibold bg-emerald-500 hover:bg-emerald-600 text-white"
+                >
+                  <Search className="w-5 h-5" />
+                  BUSCAR PRODUTO
                 </Button>
               </div>
             </CardContent>
