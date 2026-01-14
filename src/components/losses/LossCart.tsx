@@ -93,7 +93,7 @@ const LossCart = ({ products, onSuccess }: LossCartProps) => {
 
   const isAdmin = userRole === 'administrador';
   const selectedProduct = products.find(p => p.id === currentItem.produto_id);
-  const isKg = selectedProduct?.unidade_medida === 'kg';
+  const isKg = selectedProduct?.unidade_medida?.toLowerCase() === 'kg';
 
   // Normaliza entrada: converte vírgula para ponto
   const parseDecimal = (value: string): number => {
@@ -101,6 +101,38 @@ const LossCart = ({ products, onSuccess }: LossCartProps) => {
     // Remove espaços e converte vírgula para ponto
     const normalized = value.trim().replace(',', '.');
     return parseFloat(normalized) || 0;
+  };
+
+  // Formata entrada para kg: adiciona vírgula após 3 dígitos
+  const formatKgInput = (value: string): string => {
+    // Remove tudo exceto números e vírgula
+    let cleaned = value.replace(/[^\d,]/g, '');
+    
+    // Se já tem vírgula, mantém
+    if (cleaned.includes(',')) {
+      return cleaned;
+    }
+    
+    // Se digitou mais de 3 números, insere vírgula automaticamente
+    // Ex: 1000 -> 1,000 que significa 1.000 kg
+    if (cleaned.length > 3) {
+      const integerPart = cleaned.slice(0, -3);
+      const decimalPart = cleaned.slice(-3);
+      return `${integerPart},${decimalPart}`;
+    }
+    
+    return cleaned;
+  };
+
+  const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    
+    // Se é kg, aplica formatação automática
+    if (isKg) {
+      value = formatKgInput(value);
+    }
+    
+    setCurrentItem({ ...currentItem, valor: value });
   };
 
   const addToCart = () => {
@@ -275,11 +307,16 @@ const LossCart = ({ products, onSuccess }: LossCartProps) => {
                 <Input
                   type="text"
                   value={currentItem.valor}
-                  onChange={e => setCurrentItem({ ...currentItem, valor: e.target.value })}
-                  placeholder="0"
+                  onChange={handleValorChange}
+                  placeholder={isKg ? "Ex: 1,500" : "0"}
                   className="text-xl h-14 text-center font-semibold"
                   inputMode="decimal"
                 />
+                {isKg && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Digite em kg (ex: 1,500 = 1,5 kg)
+                  </p>
+                )}
               </div>
             )}
 
@@ -468,11 +505,16 @@ const LossCart = ({ products, onSuccess }: LossCartProps) => {
                   <Input
                     type="text"
                     value={currentItem.valor}
-                    onChange={e => setCurrentItem({ ...currentItem, valor: e.target.value })}
-                    placeholder=""
+                    onChange={handleValorChange}
+                    placeholder={isKg ? "Ex: 1,500" : ""}
                     className="text-lg h-12"
                     inputMode="decimal"
                   />
+                  {isKg && (
+                    <p className="text-xs text-muted-foreground">
+                      Digite em kg (ex: 1,500 = 1,5 kg)
+                    </p>
+                  )}
                 </div>
               )}
 
