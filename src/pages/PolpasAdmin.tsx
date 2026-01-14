@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Plus, Cherry, ClipboardList, BarChart3, Pencil, Trash2, Bell, FileDown, ShoppingCart, Minus, FileText, Printer, History, Package, Image, Save, Receipt, Eye, Calendar, Share2 } from 'lucide-react';
+import { Loader2, Plus, Cherry, ClipboardList, BarChart3, Pencil, Trash2, Bell, FileDown, ShoppingCart, Minus, FileText, Printer, History, Package, Image, Save, Receipt, Eye, Calendar, Share2, Copy } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
@@ -138,7 +138,7 @@ const PolpasAdmin = () => {
         async (payload) => {
           const { data: confData } = await supabase
             .from('conferencias_polpas')
-            .select('*, polpas(nome_polpa)')
+            .select('*')
             .eq('id', payload.new.id)
             .single();
 
@@ -149,16 +149,24 @@ const PolpasAdmin = () => {
               .eq('id', confData.usuario_id)
               .single();
 
+            // Buscar nome do produto no estoque
+            const { data: produtoData } = await supabase
+              .from('estoque')
+              .select('nome')
+              .eq('id', confData.polpa_id)
+              .single();
+
             const newConf = {
               ...confData,
               profiles: profileData,
+              polpas: { nome_polpa: produtoData?.nome || 'Produto' }
             };
 
             setNewConferencias(prev => [newConf, ...prev]);
             
             toast({
               title: '🔔 Nova Conferência!',
-              description: `${profileData?.nome || 'Operador'} conferiu ${confData.quantidade_conferida} unidades de ${confData.polpas?.nome_polpa}`,
+              description: `${profileData?.nome || 'Operador'} conferiu ${confData.quantidade_conferida} unidades de ${produtoData?.nome || 'Polpa'}`,
             });
 
             fetchData();
@@ -197,7 +205,7 @@ const PolpasAdmin = () => {
 
       const { data: conferenciasData } = await supabase
         .from('conferencias_polpas')
-        .select(`*, polpas:polpa_id(nome_polpa)`)
+        .select('*')
         .order('criado_em', { ascending: false })
         .limit(100);
 
@@ -222,10 +230,10 @@ const PolpasAdmin = () => {
         const conferenciasWithProfiles = conferenciasData.map(c => ({
           ...c,
           profiles: profilesMap.get(c.usuario_id),
-          polpas: { nome_polpa: polpasMap.get(c.polpa_id) || c.polpas?.nome_polpa || 'Produto' }
+          polpas: { nome_polpa: polpasMap.get(c.polpa_id) || 'Produto' }
         }));
         
-        setConferencias(conferenciasWithProfiles);
+        setConferencias(conferenciasWithProfiles as Conferencia[]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -727,6 +735,51 @@ const PolpasAdmin = () => {
       toast({ title: 'Erro', description: 'Erro ao gerar imagem', variant: 'destructive' });
     } finally {
       document.body.removeChild(tempDiv);
+    }
+  };
+
+  // Generate text for copying (like Coca-Cola)
+  const generatePedidoTextReport = (pedido: PedidoSalvo): string => {
+    const { items, dataAtual, numeroRecibo, totalItens, totalQuantidade } = generateSavedPedidoContent(pedido);
+    
+    let text = `🍓 *PEDIDO DE POLPAS*\n`;
+    text += `Nº ${String(numeroRecibo).padStart(6, '0')}\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `📅 Data: ${dataAtual}\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    text += `📦 *ITENS DO PEDIDO:*\n`;
+    items.forEach(item => {
+      text += `• ${item.polpa.nome_polpa.toUpperCase()} - ${item.quantidade} un\n`;
+    });
+    text += `\n`;
+    
+    text += `━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `📊 *RESUMO:*\n`;
+    text += `• Total de itens: ${totalItens}\n`;
+    text += `• Quantidade total: ${totalQuantidade} unidades\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `\n_COMERCIAL COSTA_\n`;
+    text += `_Preço baixo do jeito que você gosta!_`;
+    
+    return text;
+  };
+
+  const handleCopyPedidoText = async (pedido: PedidoSalvo) => {
+    const text = generatePedidoTextReport(pedido);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ 
+        title: 'Texto copiado!', 
+        description: 'Cole no WhatsApp ou onde preferir' 
+      });
+    } catch (error) {
+      console.error('Error copying:', error);
+      toast({ 
+        title: 'Erro ao copiar', 
+        description: 'Tente selecionar e copiar manualmente', 
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -1314,6 +1367,16 @@ const PolpasAdmin = () => {
                 {/* Botões de compartilhamento */}
                 <div className="border-t pt-4 space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Compartilhar</p>
+                  
+                  {/* Botão principal de copiar texto */}
+                  <Button 
+                    onClick={() => handleCopyPedidoText(selectedPedido)}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copiar Texto (WhatsApp)
+                  </Button>
+                  
                   <div className="grid grid-cols-3 gap-2">
                     <Button 
                       variant="outline" 
@@ -1340,7 +1403,7 @@ const PolpasAdmin = () => {
                       className="flex flex-col gap-1 h-auto py-2 text-green-600 hover:text-green-700 hover:bg-green-50"
                     >
                       <Share2 className="w-4 h-4" />
-                      <span className="text-xs">WhatsApp</span>
+                      <span className="text-xs">Enviar Imagem</span>
                     </Button>
                   </div>
                 </div>
