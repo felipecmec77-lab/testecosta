@@ -299,9 +299,16 @@ const ReportsSection = () => {
     }
   };
 
-  const totalPerdas = perdas.reduce((acc, p) => acc + (p.valor_perda || 0), 0);
+  // Calcular valor corretamente baseado na unidade
+  const calcularValorPerda = (perda: any) => {
+    const isKg = perda.estoque?.unidade?.toLowerCase() === 'kg';
+    const qty = isKg ? (perda.peso_perdido || 0) : (perda.quantidade_perdida || 0);
+    return qty * (perda.estoque?.preco_custo || 0);
+  };
+
+  const totalPerdas = perdas.reduce((acc, p) => acc + calcularValorPerda(p), 0);
   const perdasPorMotivo = perdas.reduce((acc: any, p) => {
-    acc[p.motivo_perda] = (acc[p.motivo_perda] || 0) + (p.valor_perda || 0);
+    acc[p.motivo_perda] = (acc[p.motivo_perda] || 0) + calcularValorPerda(p);
     return acc;
   }, {});
 
@@ -338,13 +345,19 @@ const ReportsSection = () => {
     doc.text(`Valor Total das Perdas: R$ ${formatarPreco(totalPerdas)}`, 14, 64);
 
     // Table
-    const tableData = perdas.map(perda => [
-      format(new Date(perda.data_perda + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR }),
-      (perda.estoque?.nome || 'Produto não encontrado').substring(0, 30),
-      perda.motivo_perda.toUpperCase(),
-      `${perda.quantidade_perdida || perda.peso_perdido || 0} ${perda.estoque?.unidade || 'UN'}`,
-      `R$ ${formatarPreco(perda.valor_perda || 0)}`
-    ]);
+    const tableData = perdas.map(perda => {
+      const isKg = perda.estoque?.unidade?.toLowerCase() === 'kg';
+      const qty = isKg ? (perda.peso_perdido || 0) : (perda.quantidade_perdida || 0);
+      const valorCalculado = qty * (perda.estoque?.preco_custo || 0);
+      
+      return [
+        format(new Date(perda.data_perda + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR }),
+        (perda.estoque?.nome || 'Produto não encontrado').substring(0, 30),
+        perda.motivo_perda.toUpperCase(),
+        `${qty} ${perda.estoque?.unidade || 'UN'}`,
+        `R$ ${formatarPreco(valorCalculado)}`
+      ];
+    });
 
     autoTable(doc, {
       startY: 72,
@@ -512,23 +525,29 @@ const ReportsSection = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {perdas.slice(0, 50).map(perda => (
-                  <TableRow key={perda.id}>
-                    <TableCell>
-                      {format(new Date(perda.data_perda + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
-                    </TableCell>
-                    <TableCell className="font-medium">{perda.estoque?.nome || 'Produto não encontrado'}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">{perda.motivo_perda}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {perda.quantidade_perdida || perda.peso_perdido || 0} {perda.estoque?.unidade || 'UN'}
-                    </TableCell>
-                    <TableCell className="text-right text-destructive font-medium">
-                      R$ {formatarPreco(perda.valor_perda || 0)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {perdas.slice(0, 50).map(perda => {
+                  const isKg = perda.estoque?.unidade?.toLowerCase() === 'kg';
+                  const qty = isKg ? (perda.peso_perdido || 0) : (perda.quantidade_perdida || 0);
+                  const valorCalculado = qty * (perda.estoque?.preco_custo || 0);
+                  
+                  return (
+                    <TableRow key={perda.id}>
+                      <TableCell>
+                        {format(new Date(perda.data_perda + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
+                      </TableCell>
+                      <TableCell className="font-medium">{perda.estoque?.nome || 'Produto não encontrado'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">{perda.motivo_perda}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {qty} {perda.estoque?.unidade || 'UN'}
+                      </TableCell>
+                      <TableCell className="text-right text-destructive font-medium">
+                        R$ {formatarPreco(valorCalculado)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
