@@ -114,7 +114,7 @@ const LaunchHistory = () => {
         .from('perdas')
         .select(`
           *,
-          estoque(nome, unidade)
+          estoque!perdas_produto_id_estoque_fkey(nome, unidade)
         `)
         .eq('lancamento_id', launchId)
         .order('criado_em', { ascending: true });

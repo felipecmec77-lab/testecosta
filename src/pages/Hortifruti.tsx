@@ -264,7 +264,7 @@ const ReportsSection = () => {
         .from('perdas')
         .select(`
           *,
-          estoque(nome, unidade, preco_custo),
+          estoque!perdas_produto_id_estoque_fkey(nome, unidade, preco_custo),
           lancamentos(numero)
         `)
         .gte('data_perda', start)

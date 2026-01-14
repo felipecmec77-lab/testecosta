@@ -113,7 +113,7 @@ const DashboardGeral = () => {
           quantidade_perdida,
           data_perda,
           lancamento_id,
-          estoque (preco_custo, unidade),
+          estoque!perdas_produto_id_estoque_fkey (preco_custo, unidade),
           lancamentos (status)
         `)
         .gte('data_perda', sixMonthsAgo);

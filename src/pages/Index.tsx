@@ -193,10 +193,10 @@ const SortableCard = ({ option, id }: { option: MenuOption; id: string }) => {
         <div className="p-4 rounded-full bg-white/20 mb-3">
           <option.icon className={`w-8 h-8 ${option.color}`} />
         </div>
-        <span className={`font-semibold text-center text-sm ${option.color}`}>
+        <span className={`font-semibold text-center text-sm uppercase ${option.color}`}>
           {option.name}
         </span>
-        <span className={`text-xs text-center mt-1 line-clamp-2 ${option.color} opacity-80`}>
+        <span className={`text-xs text-center mt-1 line-clamp-2 uppercase ${option.color} opacity-80`}>
           {option.description}
         </span>
       </Link>

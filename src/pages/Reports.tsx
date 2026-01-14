@@ -74,7 +74,7 @@ const Reports = () => {
         .from('perdas')
         .select(`
           *,
-          estoque (nome, preco_custo, grupo, unidade)
+          estoque!perdas_produto_id_estoque_fkey (nome, preco_custo, grupo, unidade)
         `)
         .gte('data_perda', filters.startDate)
         .lte('data_perda', filters.endDate)
