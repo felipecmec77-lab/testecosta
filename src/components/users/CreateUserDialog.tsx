@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, Loader2, ShieldCheck, Shield, Eye } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type UserRole = 'administrador' | 'operador' | 'visualizador';
 
@@ -17,37 +18,60 @@ interface CreateUserDialogProps {
 const CreateUserDialog = ({ onUserCreated }: CreateUserDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [authType, setAuthType] = useState<'email' | 'username'>('email');
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
+    username: '',
     password: '',
     role: 'operador' as UserRole,
   });
 
   const { toast } = useToast();
 
+  // Gerar email interno para usuários com username
+  const generateInternalEmail = (username: string) => {
+    return `${username}@interno.local`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.nome || !formData.email || !formData.password) {
-      toast({ title: 'Preencha todos os campos', variant: 'destructive' });
+    if (!formData.nome || !formData.password) {
+      toast({ title: 'Preencha nome e senha', variant: 'destructive' });
       return;
     }
 
-    if (formData.password.length < 6) {
-      toast({ title: 'A senha deve ter pelo menos 6 caracteres', variant: 'destructive' });
+    if (authType === 'email' && !formData.email) {
+      toast({ title: 'Preencha o email', variant: 'destructive' });
+      return;
+    }
+
+    if (authType === 'username' && !formData.username) {
+      toast({ title: 'Preencha o usuário', variant: 'destructive' });
+      return;
+    }
+
+    if (formData.password.length < 4) {
+      toast({ title: 'A senha deve ter pelo menos 4 caracteres', variant: 'destructive' });
       return;
     }
 
     setLoading(true);
 
     try {
+      // Determinar email a usar
+      const emailToUse = authType === 'email' 
+        ? formData.email 
+        : generateInternalEmail(formData.username);
+
       const response = await supabase.functions.invoke('create-user', {
         body: {
-          email: formData.email,
+          email: emailToUse,
           password: formData.password,
           nome: formData.nome,
           role: formData.role,
+          username: authType === 'username' ? formData.username : null,
         },
       });
 
@@ -56,22 +80,33 @@ const CreateUserDialog = ({ onUserCreated }: CreateUserDialogProps) => {
       }
 
       if (response.data?.error) {
-        // Translate common errors to Portuguese
         let errorMessage = response.data.error;
         if (errorMessage.includes('already been registered') || errorMessage.includes('email_exists')) {
-          errorMessage = 'Este email já está cadastrado no sistema';
+          errorMessage = authType === 'email' 
+            ? 'Este email já está cadastrado' 
+            : 'Este usuário já está cadastrado';
         }
         throw new Error(errorMessage);
       }
 
+      // Se for username, atualizar o profile com o username
+      if (authType === 'username' && response.data?.user?.id) {
+        await supabase
+          .from('profiles')
+          .update({ username: formData.username })
+          .eq('id', response.data.user.id);
+      }
+
       toast({ title: 'Usuário criado com sucesso!' });
-      setFormData({ nome: '', email: '', password: '', role: 'operador' });
+      setFormData({ nome: '', email: '', username: '', password: '', role: 'operador' });
       setOpen(false);
       onUserCreated();
     } catch (error: any) {
       let errorMessage = error.message || 'Erro desconhecido';
       if (errorMessage.includes('already been registered') || errorMessage.includes('email_exists')) {
-        errorMessage = 'Este email já está cadastrado no sistema';
+        errorMessage = authType === 'email' 
+          ? 'Este email já está cadastrado' 
+          : 'Este usuário já está cadastrado';
       }
       toast({ 
         title: 'Erro ao criar usuário', 
@@ -109,25 +144,45 @@ const CreateUserDialog = ({ onUserCreated }: CreateUserDialogProps) => {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={e => setFormData({ ...formData, email: e.target.value })}
-              placeholder="email@exemplo.com"
-            />
-          </div>
+          <Tabs value={authType} onValueChange={(v) => setAuthType(v as 'email' | 'username')}>
+            <TabsList className="w-full">
+              <TabsTrigger value="email" className="flex-1">Com Email</TabsTrigger>
+              <TabsTrigger value="username" className="flex-1">Com Usuário</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="email" className="space-y-2 mt-3">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                placeholder="email@exemplo.com"
+              />
+            </TabsContent>
+            
+            <TabsContent value="username" className="space-y-2 mt-3">
+              <Label htmlFor="username">Usuário (pode ser numérico)</Label>
+              <Input
+                id="username"
+                value={formData.username}
+                onChange={e => setFormData({ ...formData, username: e.target.value })}
+                placeholder="Ex: 001 ou joao.silva"
+              />
+              <p className="text-xs text-muted-foreground">
+                Usuário poderá fazer login usando este nome ao invés de email
+              </p>
+            </TabsContent>
+          </Tabs>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
+            <Label htmlFor="password">Senha {authType === 'username' && '(pode ser numérica)'}</Label>
             <Input
               id="password"
               type="password"
               value={formData.password}
               onChange={e => setFormData({ ...formData, password: e.target.value })}
-              placeholder="Mínimo 6 caracteres"
+              placeholder={authType === 'username' ? 'Ex: 1234' : 'Mínimo 4 caracteres'}
             />
           </div>
 

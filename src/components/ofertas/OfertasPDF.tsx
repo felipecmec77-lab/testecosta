@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Download, Share2, X, Users } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -52,7 +52,7 @@ const TIPOS_OFERTA: Record<string, string> = {
 const SETORES: Record<string, string> = {
   'geral': 'GERAL',
   'varejo': 'VAREJO',
-  'hortifruti': 'HORTIFRÚTI',
+  'hortifruti': 'HORTIFRUTI',
 };
 
 // Calcular margem de lucro baseado no custo vs oferta
@@ -67,31 +67,32 @@ const OfertasPDF = ({ oferta, itens, onClose, forMarketing = false }: OfertasPDF
   const generatePDF = async () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     
-    // Header
+    // Header compacto
     doc.setFillColor(220, 38, 38);
-    doc.rect(0, 0, pageWidth, 35, 'F');
+    doc.rect(0, 0, pageWidth, 18, 'F');
     
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('COMERCIAL COSTA', pageWidth / 2, 18, { align: 'center' });
+    doc.text('COMERCIAL COSTA', pageWidth / 2, 8, { align: 'center' });
     
-    doc.setFontSize(12);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.text(forMarketing ? 'LISTA DE OFERTAS - MARKETING' : 'LISTA DE OFERTAS PARA ENCARTE', pageWidth / 2, 28, { align: 'center' });
+    doc.text(forMarketing ? 'OFERTAS - MARKETING' : 'LISTA DE OFERTAS', pageWidth / 2, 14, { align: 'center' });
     
-    // Campaign info
+    // Campaign info compacto
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text(oferta.nome_campanha.toUpperCase(), 14, 50);
-    
     doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text(oferta.nome_campanha.toUpperCase(), 10, 26);
+    
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 100, 100);
-    doc.text(`PERÍODO: ${format(parseLocalDate(oferta.data_inicio), "dd 'DE' MMMM", { locale: ptBR }).toUpperCase()} A ${format(parseLocalDate(oferta.data_fim), "dd 'DE' MMMM 'DE' yyyy", { locale: ptBR }).toUpperCase()}`, 14, 58);
-    doc.text(`TIPO: ${TIPOS_OFERTA[oferta.tipo] || oferta.tipo.toUpperCase()} | SETOR: ${SETORES[oferta.setor] || oferta.setor.toUpperCase()}`, 14, 65);
+    const periodo = `${format(parseLocalDate(oferta.data_inicio), "dd/MM", { locale: ptBR })} A ${format(parseLocalDate(oferta.data_fim), "dd/MM/yyyy", { locale: ptBR })}`;
+    doc.text(`${TIPOS_OFERTA[oferta.tipo] || oferta.tipo} | ${periodo}`, 10, 31);
     
     // Sort items - destaques first
     const sortedItens = [...itens].sort((a, b) => {
@@ -100,55 +101,53 @@ const OfertasPDF = ({ oferta, itens, onClose, forMarketing = false }: OfertasPDF
       return 0;
     });
     
-    // Format prices with fixed width for alignment
+    // Format prices
     const formatPrice = (value: number) => {
-      return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      return `R$ ${value.toFixed(2).replace('.', ',')}`;
     };
     
-    // Table data - different columns for marketing vs complete
+    // Table data - colunas otimizadas
     let tableHead: string[][];
     let tableData: string[][];
+    const margin = 10;
+    const tableWidth = pageWidth - (margin * 2);
 
     if (forMarketing) {
-      tableHead = [['PRODUTO', 'VALOR OFERTA', 'MARGEM', 'DESTAQUE']];
+      tableHead = [['PRODUTO', 'OFERTA', 'MARGEM', '★']];
       tableData = sortedItens.map(item => [
         item.nome_item.toUpperCase(),
         formatPrice(item.preco_oferta),
         `${calcularMargemLucro(item.preco_custo, item.preco_oferta).toFixed(0)}%`,
-        item.destaque ? 'SIM' : 'NÃO'
+        item.destaque ? '★' : ''
       ]);
     } else {
-      tableHead = [['PRODUTO', 'CUSTO', 'OFERTA', 'MARGEM LUCRO', 'DESTAQUE']];
+      tableHead = [['PRODUTO', 'CUSTO', 'OFERTA', 'MARGEM', '★']];
       tableData = sortedItens.map(item => [
         item.nome_item.toUpperCase(),
         formatPrice(item.preco_custo),
         formatPrice(item.preco_oferta),
         `${calcularMargemLucro(item.preco_custo, item.preco_oferta).toFixed(0)}%`,
-        item.destaque ? 'SIM' : 'NÃO'
+        item.destaque ? '★' : ''
       ]);
     }
 
-    // Calculate column widths based on page width
-    const margin = 14;
-    const tableWidth = pageWidth - (margin * 2);
-    
     const columnStyles = forMarketing ? {
-      0: { cellWidth: tableWidth * 0.45, halign: 'center' as const },
+      0: { cellWidth: tableWidth * 0.50, halign: 'left' as const },
       1: { cellWidth: tableWidth * 0.22, halign: 'center' as const, fontStyle: 'bold' as const },
-      2: { cellWidth: tableWidth * 0.16, halign: 'center' as const },
-      3: { cellWidth: tableWidth * 0.17, halign: 'center' as const }
+      2: { cellWidth: tableWidth * 0.18, halign: 'center' as const },
+      3: { cellWidth: tableWidth * 0.10, halign: 'center' as const }
     } : {
-      0: { cellWidth: tableWidth * 0.40, halign: 'center' as const },
+      0: { cellWidth: tableWidth * 0.40, halign: 'left' as const },
       1: { cellWidth: tableWidth * 0.15, halign: 'center' as const },
-      2: { cellWidth: tableWidth * 0.15, halign: 'center' as const, fontStyle: 'bold' as const },
-      3: { cellWidth: tableWidth * 0.15, halign: 'center' as const },
-      4: { cellWidth: tableWidth * 0.15, halign: 'center' as const }
+      2: { cellWidth: tableWidth * 0.18, halign: 'center' as const, fontStyle: 'bold' as const },
+      3: { cellWidth: tableWidth * 0.17, halign: 'center' as const },
+      4: { cellWidth: tableWidth * 0.10, halign: 'center' as const }
     };
 
     autoTable(doc, {
       head: tableHead,
       body: tableData,
-      startY: 75,
+      startY: 36,
       margin: { left: margin, right: margin },
       tableWidth: 'auto',
       theme: 'striped',
@@ -157,28 +156,28 @@ const OfertasPDF = ({ oferta, itens, onClose, forMarketing = false }: OfertasPDF
         textColor: 255,
         fontSize: 10,
         fontStyle: 'bold',
-        cellPadding: 4
+        cellPadding: 2
       },
       bodyStyles: {
-        fontSize: 9,
-        cellPadding: 3
+        fontSize: 11,
+        cellPadding: 2,
+        minCellHeight: 6
       },
       columnStyles,
       alternateRowStyles: {
-        fillColor: [248, 248, 248]
+        fillColor: [252, 252, 252]
       },
       styles: {
         overflow: 'linebreak',
         valign: 'middle',
         lineWidth: 0.1,
-        lineColor: [220, 220, 220]
+        lineColor: [230, 230, 230]
       },
       didParseCell: (data) => {
-        // Apply center alignment for all header columns
         if (data.section === 'head') {
           data.cell.styles.halign = 'center';
         }
-        // Highlight destaque items in product column
+        // Highlight destaque items
         if (data.section === 'body' && data.column.index === 0) {
           const row = sortedItens[data.row.index];
           if (row?.destaque) {
@@ -186,44 +185,36 @@ const OfertasPDF = ({ oferta, itens, onClose, forMarketing = false }: OfertasPDF
             data.cell.styles.textColor = [220, 38, 38];
           }
         }
-        // Green color for economy column
-        const economyColIndex = forMarketing ? 2 : 3;
-        if (data.section === 'body' && data.column.index === economyColIndex) {
+        // Green color for margin column
+        const marginColIndex = forMarketing ? 2 : 3;
+        if (data.section === 'body' && data.column.index === marginColIndex) {
           data.cell.styles.textColor = [22, 163, 74];
           data.cell.styles.fontStyle = 'bold';
         }
-        // Destaque column styling
-        const destaqueColIndex = forMarketing ? 3 : 4;
-        if (data.section === 'body' && data.column.index === destaqueColIndex) {
+        // Star column styling
+        const starColIndex = forMarketing ? 3 : 4;
+        if (data.section === 'body' && data.column.index === starColIndex) {
           const cellText = data.cell.text.join('');
-          if (cellText === 'SIM') {
+          if (cellText === '★') {
             data.cell.styles.textColor = [220, 38, 38];
-            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fontSize = 12;
           }
         }
       }
     });
 
-    // Footer
+    // Footer compacto
     const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
     
-    doc.setDrawColor(200, 200, 200);
-    doc.line(14, finalY + 10, 196, finalY + 10);
-    
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`TOTAL DE ${itens.length} ITENS EM OFERTA`, 14, finalY + 18);
-    doc.text(`GERADO EM ${format(new Date(), "dd/MM/yyyy 'ÀS' HH:mm", { locale: ptBR }).toUpperCase()}`, 14, finalY + 24);
+    doc.setFontSize(7);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`${itens.length} itens | Gerado em ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`, 10, finalY + 5);
     
     if (oferta.observacao) {
-      doc.setFontSize(10);
-      doc.text(`OBS: ${oferta.observacao.toUpperCase()}`, 14, finalY + 32);
+      doc.text(`Obs: ${oferta.observacao}`, 10, finalY + 9);
     }
     
-    const footerText = forMarketing 
-      ? 'COMERCIAL COSTA - LISTA PARA EQUIPE DE MARKETING' 
-      : 'COMERCIAL COSTA - LISTA PARA CRIAÇÃO DE ENCARTE';
-    doc.text(footerText, 196, finalY + 24, { align: 'right' });
+    doc.text('COMERCIAL COSTA', pageWidth - 10, finalY + 5, { align: 'right' });
     
     // Save
     const suffix = forMarketing ? '-marketing' : '';
@@ -247,22 +238,15 @@ const OfertasPDF = ({ oferta, itens, onClose, forMarketing = false }: OfertasPDF
   };
 
   const shareWhatsApp = async () => {
-    // Generate text summary for WhatsApp
-    let text = `*${oferta.nome_campanha.toUpperCase()}*\n\n`;
+    let text = `*${oferta.nome_campanha.toUpperCase()}*\n`;
     text += `📅 ${format(parseLocalDate(oferta.data_inicio), 'dd/MM', { locale: ptBR })} A ${format(parseLocalDate(oferta.data_fim), 'dd/MM/yyyy', { locale: ptBR })}\n\n`;
-    text += `*OFERTAS:*\n`;
     
     itens.forEach(item => {
       text += `${item.destaque ? '⭐ ' : ''}${item.nome_item.toUpperCase()}\n`;
-      if (forMarketing) {
-        text += `   VALOR: R$ ${item.preco_oferta.toFixed(2)} (${calcularMargemLucro(item.preco_custo, item.preco_oferta).toFixed(0)}% margem)\n`;
-      } else {
-        text += `   CUSTO: R$ ${item.preco_custo.toFixed(2)} → OFERTA: R$ ${item.preco_oferta.toFixed(2)} (${calcularMargemLucro(item.preco_custo, item.preco_oferta).toFixed(0)}% margem)\n`;
-      }
-      text += `   DESTAQUE: ${item.destaque ? 'SIM' : 'NÃO'}\n\n`;
+      text += `   *R$ ${item.preco_oferta.toFixed(2).replace('.', ',')}*\n`;
     });
     
-    text += `_LISTA GERADA PELO SISTEMA COMERCIAL COSTA_`;
+    text += `\n_COMERCIAL COSTA_`;
     
     const encodedText = encodeURIComponent(text);
     window.open(`https://wa.me/?text=${encodedText}`, '_blank');
@@ -277,7 +261,7 @@ const OfertasPDF = ({ oferta, itens, onClose, forMarketing = false }: OfertasPDF
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {forMarketing ? (
@@ -294,76 +278,71 @@ const OfertasPDF = ({ oferta, itens, onClose, forMarketing = false }: OfertasPDF
         {forMarketing && (
           <div className="bg-secondary/10 border border-secondary/30 rounded-lg p-3 text-sm">
             <p className="font-medium text-secondary">PDF para Equipe de Marketing</p>
-            <p className="text-muted-foreground">Este PDF não contém preços de custo, apenas itens e valores de oferta.</p>
+            <p className="text-muted-foreground">Este PDF não contém preços de custo.</p>
           </div>
         )}
 
         {/* Preview */}
         <div 
           ref={previewRef}
-          className="bg-white p-6 rounded-lg border shadow-sm text-black"
-          style={{ minWidth: '500px' }}
+          className="bg-white p-4 rounded-lg border shadow-sm text-black"
         >
-          {/* Header */}
-          <div className="bg-red-600 text-white p-4 rounded-t-lg -mx-6 -mt-6 mb-4">
-            <h1 className="text-2xl font-bold text-center">COMERCIAL COSTA</h1>
-            <p className="text-center text-sm opacity-90">
-              {forMarketing ? 'LISTA DE OFERTAS - MARKETING' : 'LISTA DE OFERTAS PARA ENCARTE'}
+          {/* Header compacto */}
+          <div className="bg-red-600 text-white p-3 rounded-t-lg -mx-4 -mt-4 mb-3">
+            <h1 className="text-xl font-bold text-center">COMERCIAL COSTA</h1>
+            <p className="text-center text-xs opacity-90">
+              {forMarketing ? 'OFERTAS - MARKETING' : 'LISTA DE OFERTAS'}
             </p>
           </div>
 
-          {/* Campaign Info */}
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-gray-900">{oferta.nome_campanha.toUpperCase()}</h2>
-            <p className="text-sm text-gray-600">
-              PERÍODO: {format(parseLocalDate(oferta.data_inicio), "dd 'DE' MMMM", { locale: ptBR }).toUpperCase()} A {format(parseLocalDate(oferta.data_fim), "dd 'DE' MMMM 'DE' yyyy", { locale: ptBR }).toUpperCase()}
-            </p>
-            <p className="text-sm text-gray-600">
-              {TIPOS_OFERTA[oferta.tipo]} • {SETORES[oferta.setor]}
+          {/* Campaign Info compacto */}
+          <div className="mb-3">
+            <h2 className="text-lg font-bold text-gray-900">{oferta.nome_campanha.toUpperCase()}</h2>
+            <p className="text-xs text-gray-600">
+              {TIPOS_OFERTA[oferta.tipo]} | {format(parseLocalDate(oferta.data_inicio), "dd/MM", { locale: ptBR })} A {format(parseLocalDate(oferta.data_fim), "dd/MM/yyyy", { locale: ptBR })}
             </p>
           </div>
 
-          {/* Items Table */}
-          <table className="w-full text-sm">
+          {/* Items Table com fonte maior */}
+          <table className="w-full text-base">
             <thead>
               <tr className="border-b-2 border-red-600">
-                <th className="text-left py-2 font-bold">PRODUTO</th>
-                {!forMarketing && <th className="text-right py-2 font-bold">CUSTO</th>}
-                <th className="text-right py-2 font-bold">{forMarketing ? 'VALOR OFERTA' : 'OFERTA'}</th>
-                <th className="text-center py-2 font-bold">MARGEM LUCRO</th>
-                <th className="text-center py-2 font-bold">DESTAQUE</th>
+                <th className="text-left py-1 font-bold">PRODUTO</th>
+                {!forMarketing && <th className="text-center py-1 font-bold">CUSTO</th>}
+                <th className="text-center py-1 font-bold">OFERTA</th>
+                <th className="text-center py-1 font-bold">MARGEM</th>
+                <th className="text-center py-1 font-bold w-10">★</th>
               </tr>
             </thead>
             <tbody>
               {sortedItens.map((item, index) => (
-                <tr key={index} className="border-b border-gray-200">
-                  <td className={`py-2 ${item.destaque ? 'font-bold text-red-600' : 'text-gray-900'}`}>
-                    {item.destaque && '★ '}{item.nome_item.toUpperCase()}
+                <tr key={index} className="border-b border-gray-100">
+                  <td className={`py-1.5 ${item.destaque ? 'font-bold text-red-600' : 'text-gray-900'}`}>
+                    {item.nome_item.toUpperCase()}
                   </td>
                   {!forMarketing && (
-                    <td className="text-right py-2 text-gray-500">
-                      R$ {item.preco_custo.toFixed(2)}
+                    <td className="text-center py-1.5 text-gray-500 text-sm">
+                      R$ {item.preco_custo.toFixed(2).replace('.', ',')}
                     </td>
                   )}
-                  <td className="text-right py-2 font-bold text-gray-900">
-                    R$ {item.preco_oferta.toFixed(2)}
+                  <td className="text-center py-1.5 font-bold text-gray-900">
+                    R$ {item.preco_oferta.toFixed(2).replace('.', ',')}
                   </td>
-                  <td className="text-center py-2 font-bold text-green-600">
+                  <td className="text-center py-1.5 font-bold text-green-600">
                     {calcularMargemLucro(item.preco_custo, item.preco_oferta).toFixed(0)}%
                   </td>
-                  <td className={`text-center py-2 font-bold ${item.destaque ? 'text-red-600' : 'text-gray-500'}`}>
-                    {item.destaque ? 'SIM' : 'NÃO'}
+                  <td className="text-center py-1.5 text-red-600 text-lg">
+                    {item.destaque ? '★' : ''}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          {/* Footer */}
-          <div className="mt-4 pt-4 border-t text-xs text-gray-600">
-            <p>TOTAL DE {itens.length} ITENS EM OFERTA</p>
-            <p>GERADO EM {format(new Date(), "dd/MM/yyyy 'ÀS' HH:mm", { locale: ptBR }).toUpperCase()}</p>
-            {oferta.observacao && <p className="mt-1">OBS: {oferta.observacao.toUpperCase()}</p>}
+          {/* Footer compacto */}
+          <div className="mt-3 pt-2 border-t text-xs text-gray-500 flex justify-between">
+            <span>{itens.length} itens | {format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
+            <span>COMERCIAL COSTA</span>
           </div>
         </div>
 
