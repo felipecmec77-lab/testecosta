@@ -1270,8 +1270,10 @@ const PerdasTab = ({ items }: PerdasTabProps) => {
             <CardContent>
               {lancamentos.filter(
                 (l) =>
-                  filtroResolucao === "todos" ||
-                  (l.resolucoes && l.resolucoes.includes(filtroResolucao))
+                  // Filtrar lançamentos zerados (sem valor E sem itens)
+                  ((l.total_valor && l.total_valor > 0) || (l.total_itens && l.total_itens > 0)) &&
+                  (filtroResolucao === "todos" ||
+                  (l.resolucoes && l.resolucoes.includes(filtroResolucao)))
               ).length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <History className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -1282,8 +1284,10 @@ const PerdasTab = ({ items }: PerdasTabProps) => {
                   {lancamentos
                     .filter(
                       (l) =>
-                        filtroResolucao === "todos" ||
-                        (l.resolucoes && l.resolucoes.includes(filtroResolucao))
+                        // Filtrar lançamentos zerados (sem valor E sem itens)
+                        ((l.total_valor && l.total_valor > 0) || (l.total_itens && l.total_itens > 0)) &&
+                        (filtroResolucao === "todos" ||
+                        (l.resolucoes && l.resolucoes.includes(filtroResolucao)))
                     )
                     .map((lancamento) => (
                       <div

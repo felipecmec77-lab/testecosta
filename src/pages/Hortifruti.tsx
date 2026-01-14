@@ -6,7 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   TrendingDown, 
@@ -14,11 +18,17 @@ import {
   FileText,
   Loader2,
   Apple,
-  BarChart3
+  BarChart3,
+  Download,
+  Filter,
+  Calendar
 } from 'lucide-react';
 import LossCart from '@/components/losses/LossCart';
 import LaunchList, { Launch } from '@/components/losses/LaunchList';
 import HortifrutiDashboard from '@/components/hortifruti/HortifrutiDashboard';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { toast } from 'sonner';
 
 interface Product {
   id: string;
@@ -211,22 +221,50 @@ const Hortifruti = () => {
 const ReportsSection = () => {
   const [perdas, setPerdas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState<'week' | 'month' | 'custom'>('week');
+  const [customDateStart, setCustomDateStart] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [customDateEnd, setCustomDateEnd] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   useEffect(() => {
     fetchPerdas();
-  }, []);
+  }, [filterType, customDateStart, customDateEnd]);
+
+  const getDateRange = () => {
+    const today = new Date();
+    
+    switch (filterType) {
+      case 'week':
+        // Semana da segunda até domingo
+        const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Segunda
+        const weekEnd = endOfWeek(today, { weekStartsOn: 1 }); // Domingo
+        return { start: format(weekStart, 'yyyy-MM-dd'), end: format(weekEnd, 'yyyy-MM-dd') };
+      case 'month':
+        return { 
+          start: format(startOfMonth(today), 'yyyy-MM-dd'), 
+          end: format(endOfMonth(today), 'yyyy-MM-dd') 
+        };
+      case 'custom':
+        return { start: customDateStart, end: customDateEnd };
+      default:
+        return { start: format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd'), end: format(today, 'yyyy-MM-dd') };
+    }
+  };
 
   const fetchPerdas = async () => {
+    setLoading(true);
     try {
+      const { start, end } = getDateRange();
+      
       const { data, error } = await supabase
         .from('perdas')
         .select(`
           *,
-          estoque(nome, unidade),
+          estoque(nome, unidade, preco_custo),
           lancamentos(numero)
         `)
-        .order('data_perda', { ascending: false })
-        .limit(100);
+        .gte('data_perda', start)
+        .lte('data_perda', end)
+        .order('data_perda', { ascending: false });
       
       if (error) throw error;
       setPerdas(data || []);
@@ -243,6 +281,80 @@ const ReportsSection = () => {
     return acc;
   }, {});
 
+  const exportPDF = () => {
+    if (perdas.length === 0) {
+      toast.error('Nenhuma perda para exportar');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const { start, end } = getDateRange();
+    
+    // Header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RELATÓRIO DE PERDAS - HORTIFRUTI', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('COMERCIAL COSTA', 105, 28, { align: 'center' });
+    
+    // Período
+    doc.setFontSize(10);
+    const startFormatted = format(new Date(start + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR });
+    const endFormatted = format(new Date(end + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR });
+    doc.text(`Período: ${startFormatted} a ${endFormatted}`, 105, 36, { align: 'center' });
+    
+    // Summary
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RESUMO', 14, 48);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total de Registros: ${perdas.length}`, 14, 56);
+    doc.text(`Valor Total das Perdas: R$ ${formatarPreco(totalPerdas)}`, 14, 64);
+
+    // Table
+    const tableData = perdas.map(perda => [
+      format(new Date(perda.data_perda + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR }),
+      (perda.estoque?.nome || 'Produto não encontrado').substring(0, 30),
+      perda.motivo_perda.toUpperCase(),
+      `${perda.quantidade_perdida || perda.peso_perdido || 0} ${perda.estoque?.unidade || 'UN'}`,
+      `R$ ${formatarPreco(perda.valor_perda || 0)}`
+    ]);
+
+    autoTable(doc, {
+      startY: 72,
+      head: [['Data', 'Produto', 'Motivo', 'Qtd/Peso', 'Valor']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [22, 163, 74], textColor: 255 },
+      styles: { fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 60 },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 30 },
+      }
+    });
+
+    // Footer
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.text(
+        `Página ${i} de ${pageCount} - Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
+        105,
+        doc.internal.pageSize.height - 10,
+        { align: 'center' }
+      );
+    }
+
+    doc.save(`relatorio-perdas-hortifruti-${start}-${end}.pdf`);
+    toast.success('PDF gerado com sucesso!');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-32">
@@ -251,8 +363,78 @@ const ReportsSection = () => {
     );
   }
 
+  const { start, end } = getDateRange();
+
   return (
     <div className="space-y-6">
+      {/* Filter Controls */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <Button
+              variant={filterType === 'week' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterType('week')}
+            >
+              Esta Semana (Seg-Dom)
+            </Button>
+            <Button
+              variant={filterType === 'month' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterType('month')}
+            >
+              Este Mês
+            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={filterType === 'custom' ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  <Filter className="w-4 h-4 mr-1" />
+                  Personalizado
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Data Início</Label>
+                    <Input
+                      type="date"
+                      value={customDateStart}
+                      onChange={(e) => setCustomDateStart(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Data Fim</Label>
+                    <Input
+                      type="date"
+                      value={customDateEnd}
+                      onChange={(e) => setCustomDateEnd(e.target.value)}
+                    />
+                  </div>
+                  <Button onClick={() => setFilterType('custom')} className="w-full">
+                    Aplicar Filtro
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+            
+            <div className="ml-auto">
+              <Button onClick={exportPDF} className="gap-2 bg-green-600 hover:bg-green-700">
+                <Download className="w-4 h-4" />
+                Exportar PDF
+              </Button>
+            </div>
+          </div>
+          
+          <p className="text-sm text-muted-foreground mt-3">
+            Exibindo: {format(new Date(start + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })} até {format(new Date(end + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -286,39 +468,46 @@ const ReportsSection = () => {
       {/* Recent Losses */}
       <Card>
         <CardHeader>
-          <CardTitle>Últimas Perdas Registradas</CardTitle>
+          <CardTitle>Perdas do Período</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Produto</TableHead>
-                <TableHead>Motivo</TableHead>
-                <TableHead className="text-right">Qtd/Peso</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {perdas.slice(0, 20).map(perda => (
-                <TableRow key={perda.id}>
-                  <TableCell>
-                    {format(new Date(perda.data_perda + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
-                  </TableCell>
-                  <TableCell className="font-medium">{perda.estoque?.nome || 'Produto não encontrado'}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="capitalize">{perda.motivo_perda}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {perda.quantidade_perdida || perda.peso_perdido || 0} {perda.estoque?.unidade || 'UN'}
-                  </TableCell>
-                  <TableCell className="text-right text-destructive font-medium">
-                    R$ {formatarPreco(perda.valor_perda || 0)}
-                  </TableCell>
+          {perdas.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <FileText className="w-12 h-12 mx-auto mb-2 opacity-30" />
+              <p>Nenhuma perda registrada no período</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Produto</TableHead>
+                  <TableHead>Motivo</TableHead>
+                  <TableHead className="text-right">Qtd/Peso</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {perdas.slice(0, 50).map(perda => (
+                  <TableRow key={perda.id}>
+                    <TableCell>
+                      {format(new Date(perda.data_perda + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
+                    </TableCell>
+                    <TableCell className="font-medium">{perda.estoque?.nome || 'Produto não encontrado'}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">{perda.motivo_perda}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {perda.quantidade_perdida || perda.peso_perdido || 0} {perda.estoque?.unidade || 'UN'}
+                    </TableCell>
+                    <TableCell className="text-right text-destructive font-medium">
+                      R$ {formatarPreco(perda.valor_perda || 0)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

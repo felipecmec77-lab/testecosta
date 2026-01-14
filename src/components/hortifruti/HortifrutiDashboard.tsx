@@ -3,9 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import StatCard from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendingDown, DollarSign, Loader2, Scale, Package, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { TrendingDown, DollarSign, Loader2, Scale, Package, Calendar, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
-import { format, subDays, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { format, subDays, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -22,24 +25,26 @@ interface LossData {
   };
 }
 
-type FilterPeriod = 'today' | 'week' | 'month' | 'all';
+type FilterPeriod = 'today' | 'week' | 'month' | 'custom' | 'all';
 
 const HortifrutiDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [losses, setLosses] = useState<LossData[]>([]);
   const [allLosses, setAllLosses] = useState<LossData[]>([]);
-  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('all');
+  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('month');
   const [showUnidadesSection, setShowUnidadesSection] = useState(false);
+  const [customDateStart, setCustomDateStart] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [customDateEnd, setCustomDateEnd] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [stats, setStats] = useState({
     totalKgToday: 0,
     totalUnidadesToday: 0,
     totalKg7Days: 0,
     totalUnidades7Days: 0,
-    totalKg30Days: 0,
-    totalUnidades30Days: 0,
+    totalKgMonth: 0,
+    totalUnidadesMonth: 0,
     totalValueToday: 0,
     totalValue7Days: 0,
-    totalValue30Days: 0,
+    totalValueMonth: 0,
   });
 
   useEffect(() => {
@@ -103,28 +108,32 @@ const HortifrutiDashboard = () => {
   const calculateStats = (lossesData: LossData[], today: Date) => {
     const todayStr = format(today, 'yyyy-MM-dd');
     const sevenDaysAgoStr = format(subDays(today, 7), 'yyyy-MM-dd');
+    const monthStartStr = format(startOfMonth(today), 'yyyy-MM-dd');
 
     let totalKgToday = 0;
     let totalUnidadesToday = 0;
     let totalKg7Days = 0;
     let totalUnidades7Days = 0;
-    let totalKg30Days = 0;
-    let totalUnidades30Days = 0;
+    let totalKgMonth = 0;
+    let totalUnidadesMonth = 0;
     let totalValueToday = 0;
     let totalValue7Days = 0;
-    let totalValue30Days = 0;
+    let totalValueMonth = 0;
 
     lossesData.forEach((loss: any) => {
       const isKg = loss.produtos?.unidade_medida === 'kg';
       const lossAmount = isKg ? (loss.peso_perdido || 0) : (loss.quantidade_perdida || 0);
       const lossValue = lossAmount * (loss.produtos?.preco_unitario || 0);
       
-      if (isKg) {
-        totalKg30Days += lossAmount;
-      } else {
-        totalUnidades30Days += lossAmount;
+      // Este mês
+      if (loss.data_perda >= monthStartStr) {
+        if (isKg) {
+          totalKgMonth += lossAmount;
+        } else {
+          totalUnidadesMonth += lossAmount;
+        }
+        totalValueMonth += lossValue;
       }
-      totalValue30Days += lossValue;
 
       if (loss.data_perda === todayStr) {
         if (isKg) {
@@ -149,11 +158,11 @@ const HortifrutiDashboard = () => {
       totalUnidadesToday,
       totalKg7Days,
       totalUnidades7Days,
-      totalKg30Days,
-      totalUnidades30Days,
+      totalKgMonth,
+      totalUnidadesMonth,
       totalValueToday,
       totalValue7Days,
-      totalValue30Days,
+      totalValueMonth,
     });
   };
 
@@ -171,8 +180,11 @@ const HortifrutiDashboard = () => {
         filtered = allLosses.filter(l => l.data_perda >= weekAgo);
         break;
       case 'month':
-        const monthAgo = format(subDays(today, 30), 'yyyy-MM-dd');
-        filtered = allLosses.filter(l => l.data_perda >= monthAgo);
+        const monthStart = format(startOfMonth(today), 'yyyy-MM-dd');
+        filtered = allLosses.filter(l => l.data_perda >= monthStart);
+        break;
+      case 'custom':
+        filtered = allLosses.filter(l => l.data_perda >= customDateStart && l.data_perda <= customDateEnd);
         break;
       case 'all':
       default:
@@ -180,6 +192,10 @@ const HortifrutiDashboard = () => {
     }
 
     setLosses(filtered);
+  };
+
+  const applyCustomFilter = () => {
+    setFilterPeriod('custom');
   };
 
   // Prepare chart data
@@ -305,8 +321,42 @@ const HortifrutiDashboard = () => {
             size="sm"
             onClick={() => setFilterPeriod('month')}
           >
-            30 dias
+            Este Mês
           </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={filterPeriod === 'custom' ? 'default' : 'outline'}
+                size="sm"
+              >
+                <Filter className="w-4 h-4 mr-1" />
+                Personalizado
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="end">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Data Início</Label>
+                  <Input
+                    type="date"
+                    value={customDateStart}
+                    onChange={(e) => setCustomDateStart(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data Fim</Label>
+                  <Input
+                    type="date"
+                    value={customDateEnd}
+                    onChange={(e) => setCustomDateEnd(e.target.value)}
+                  />
+                </div>
+                <Button onClick={applyCustomFilter} className="w-full">
+                  Aplicar Filtro
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button
             variant={filterPeriod === 'all' ? 'default' : 'outline'}
             size="sm"
@@ -336,8 +386,8 @@ const HortifrutiDashboard = () => {
             icon={<TrendingDown className="w-5 h-5" />}
           />
           <StatCard
-            title="Últimos 30 dias"
-            value={`${stats.totalKg30Days.toFixed(2)} kg`}
+            title="Este Mês"
+            value={`${stats.totalKgMonth.toFixed(2)} kg`}
             icon={<TrendingDown className="w-5 h-5" />}
             variant="secondary"
           />
@@ -370,8 +420,8 @@ const HortifrutiDashboard = () => {
             icon={<TrendingDown className="w-5 h-5" />}
           />
           <StatCard
-            title="Últimos 30 dias"
-            value={`${stats.totalUnidades30Days} un`}
+            title="Este Mês"
+            value={`${stats.totalUnidadesMonth} un`}
             icon={<TrendingDown className="w-5 h-5" />}
             variant="secondary"
           />
@@ -397,8 +447,8 @@ const HortifrutiDashboard = () => {
             icon={<DollarSign className="w-5 h-5" />}
           />
           <StatCard
-            title="Últimos 30 dias"
-            value={`R$ ${stats.totalValue30Days.toFixed(2)}`}
+            title="Este Mês"
+            value={`R$ ${stats.totalValueMonth.toFixed(2)}`}
             icon={<DollarSign className="w-5 h-5" />}
             variant="secondary"
           />
