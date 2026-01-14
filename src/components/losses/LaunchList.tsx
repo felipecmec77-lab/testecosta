@@ -40,6 +40,8 @@ export interface Launch {
   };
   items_count?: number;
   total_value?: number;
+  total_peso?: number;
+  total_quantidade?: number;
 }
 
 interface LaunchListProps {
@@ -188,6 +190,16 @@ const LaunchList = ({ launches, onRefresh }: LaunchListProps) => {
                           <span className="flex items-center gap-1">
                             <Package className="w-3 h-3" />
                             {launch.items_count} {launch.items_count === 1 ? 'item' : 'itens'}
+                          </span>
+                        )}
+                        {launch.total_peso !== undefined && launch.total_peso > 0 && (
+                          <span className="text-muted-foreground">
+                            {launch.total_peso.toFixed(2)} kg
+                          </span>
+                        )}
+                        {launch.total_quantidade !== undefined && launch.total_quantidade > 0 && (
+                          <span className="text-muted-foreground">
+                            {launch.total_quantidade} un
                           </span>
                         )}
                       </div>

@@ -464,7 +464,7 @@ const LossCart = ({ products, onSuccess }: LossCartProps) => {
 
               {selectedProduct && (
                 <div className="space-y-2 sm:col-span-2">
-                  <Label>{isKg ? 'Peso (kg)' : 'Quantidade (unidades)'}</Label>
+                  <Label>{isKg ? 'Peso (kg)' : 'Quantidade'}</Label>
                   <Input
                     type="text"
                     value={currentItem.valor}
