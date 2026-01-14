@@ -133,6 +133,8 @@ const Ofertas = () => {
   const [multipleItemsPreco, setMultipleItemsPreco] = useState<Record<string, string>>({});
   const [multipleItemsCusto, setMultipleItemsCusto] = useState<Record<string, string>>({});
   const [fonteFilter, setFonteFilter] = useState<'estoque' | 'hortifruti'>('estoque');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 250;
 
   // Dialog para visualizar oferta
   const [showOfertaDetail, setShowOfertaDetail] = useState(false);
@@ -611,6 +613,18 @@ const Ofertas = () => {
     const matchesFonte = item.fonte === fonteFilter;
     return matchesSearch && matchesFonte;
   });
+
+  // Paginação para o dialog
+  const totalPages = Math.ceil(filteredEstoque.length / ITEMS_PER_PAGE);
+  const paginatedEstoque = filteredEstoque.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset page quando busca/filtro muda
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchEstoque, fonteFilter]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -1144,6 +1158,36 @@ const Ofertas = () => {
               </div>
             </div>
 
+            {/* Pagination Info */}
+            <div className="flex items-center justify-between px-3 py-2 mb-2 bg-muted/30 rounded-lg">
+              <span className="text-sm text-muted-foreground">
+                Exibindo {filteredEstoque.length > 0 ? ((currentPage - 1) * ITEMS_PER_PAGE) + 1 : 0} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredEstoque.length)} de {filteredEstoque.length} produtos
+              </span>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Anterior
+                  </Button>
+                  <span className="text-sm font-medium px-2">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Próximo
+                  </Button>
+                </div>
+              )}
+            </div>
+
             <div className="max-h-96 overflow-y-auto border rounded-md">
               <Table>
                 <TableHeader>
@@ -1176,7 +1220,7 @@ const Ofertas = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEstoque.slice(0, 50).map(item => {
+                  {paginatedEstoque.map(item => {
                     const isSelected = selectedMultipleItems.includes(item.id);
                     const jaAdicionado = itensOferta.some(i => i.item_id === item.id);
                     return (

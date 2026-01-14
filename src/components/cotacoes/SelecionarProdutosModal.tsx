@@ -61,6 +61,8 @@ const SelecionarProdutosModal = ({
   const [produtos, setProdutos] = useState<ProdutoEstoque[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 250;
   
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
   const [showCarrinho, setShowCarrinho] = useState(false);
@@ -150,6 +152,18 @@ const SelecionarProdutosModal = ({
       return matchSearch;
     });
   }, [produtos, searchTerm, subgruposOcultos]);
+
+  // Paginação
+  const totalPages = Math.ceil(produtosFiltrados.length / ITEMS_PER_PAGE);
+  const paginatedProdutos = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return produtosFiltrados.slice(start, start + ITEMS_PER_PAGE);
+  }, [produtosFiltrados, currentPage]);
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // Funções do carrinho
   const addToCarrinho = (produto: ProdutoEstoque) => {
@@ -328,6 +342,36 @@ const SelecionarProdutosModal = ({
             </div>
           ) : (
             <div className="py-4">
+              {/* Pagination Info */}
+              <div className="flex items-center justify-between px-3 py-2 mb-2 bg-muted/30 rounded-lg">
+                <span className="text-sm text-muted-foreground">
+                  Exibindo {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, produtosFiltrados.length)} de {produtosFiltrados.length} produtos
+                </span>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Anterior
+                    </Button>
+                    <span className="text-sm font-medium px-2">
+                      {currentPage} / {totalPages}
+                    </span>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Próximo
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               {/* Table Header */}
               <div className="grid grid-cols-[auto_1fr_120px_100px_120px] gap-4 px-3 py-2 text-xs font-medium text-muted-foreground uppercase border-b">
                 <div className="w-10"></div>
@@ -338,7 +382,7 @@ const SelecionarProdutosModal = ({
               </div>
 
               {/* Products */}
-              {produtosFiltrados.map((produto) => {
+              {paginatedProdutos.map((produto) => {
                 const inCarrinho = isInCarrinho(produto.id);
                 const quantidade = getQuantidadeCarrinho(produto.id);
 
