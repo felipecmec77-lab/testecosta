@@ -542,7 +542,7 @@ const PerdasTab = ({ items }: PerdasTabProps) => {
         quantidade_perdida: item.quantidade,
         preco_unitario: item.preco_unitario,
         valor_perda: item.quantidade * item.preco_unitario,
-        motivo_perda: item.motivo_perda as "vencido" | "danificado" | "quebrado" | "avaria" | "outros",
+        motivo_perda: item.motivo_perda as "vencido" | "danificado" | "quebrado" | "avaria" | "outros" | "limpeza" | "manutencao" | "escritorio" | "alimentacao",
         tipo_resolucao: item.tipo_resolucao as "sem_resolucao" | "troca" | "bonificacao" | "desconto",
         data_vencimento: item.data_vencimento || null,
       }));
