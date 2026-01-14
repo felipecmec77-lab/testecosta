@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Search, Barcode, Loader2, Pencil, Trash2, Package } from 'lucide-react';
+import { searchAcrossFields } from '@/lib/searchUtils';
 
 interface ProdutoCotacao {
   id: string;
@@ -188,9 +189,7 @@ const ProdutosCotacao = () => {
   };
 
   const filteredProducts = produtos.filter(p =>
-    p.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.codigo_barras?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.marca?.toLowerCase().includes(searchTerm.toLowerCase())
+    searchAcrossFields([p.nome, p.codigo_barras, p.marca, p.categoria], searchTerm)
   );
 
   if (loading) {

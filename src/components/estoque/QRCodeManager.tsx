@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { searchAcrossFields } from "@/lib/searchUtils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,11 +44,8 @@ const QRCodeManager = ({ items }: QRCodeManagerProps) => {
 
   const filteredItems = useMemo(() => {
     if (!searchQuery) return items.slice(0, 50);
-    return items.filter(
-      (item) =>
-        item.codigo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.codigo_barras?.toLowerCase().includes(searchQuery.toLowerCase())
+    return items.filter(item =>
+      searchAcrossFields([item.codigo, item.nome, item.codigo_barras], searchQuery)
     ).slice(0, 50);
   }, [items, searchQuery]);
 

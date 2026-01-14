@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import CreateUserDialog from '@/components/users/CreateUserDialog';
 import UserPermissionsDialog from '@/components/users/UserPermissionsDialog';
 import UserProfileCard from '@/components/users/UserProfileCard';
+import UserPhotoUpload from '@/components/users/UserPhotoUpload';
 import { Users as UsersIcon, Loader2, Shield, ShieldCheck, Eye, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -25,6 +26,8 @@ interface UserData {
   ativo: boolean;
   criado_em: string;
   role?: UserRole;
+  foto_url?: string | null;
+  username?: string | null;
 }
 
 const Users = () => {
@@ -248,12 +251,37 @@ const Users = () => {
                       <TableRow key={user.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                              <span className="text-sm font-semibold text-primary">
-                                {user.nome.charAt(0).toUpperCase()}
-                              </span>
+                            <div className="relative group">
+                              {user.foto_url ? (
+                                <img 
+                                  src={user.foto_url} 
+                                  alt={user.nome}
+                                  className="w-9 h-9 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <span className="text-sm font-semibold text-primary">
+                                    {user.nome.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                              {userRole === 'administrador' && (
+                                <div className="absolute -bottom-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <UserPhotoUpload
+                                    userId={user.id}
+                                    currentPhotoUrl={user.foto_url || null}
+                                    userName={user.nome}
+                                    onPhotoUpdated={fetchUsers}
+                                  />
+                                </div>
+                              )}
                             </div>
-                            <span className="font-medium">{user.nome}</span>
+                            <div>
+                              <span className="font-medium">{user.nome}</span>
+                              {user.username && (
+                                <p className="text-xs text-muted-foreground">@{user.username}</p>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{user.email}</TableCell>

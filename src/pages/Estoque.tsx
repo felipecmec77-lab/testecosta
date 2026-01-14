@@ -96,6 +96,7 @@ import PerdasTab from "@/components/estoque/PerdasTab";
 import CadastroConfigManager from "@/components/estoque/CadastroConfigManager";
 import EstoqueRelatorios from "@/components/estoque/EstoqueRelatorios";
 import ScannerDialog from "@/components/estoque/ScannerDialog";
+import { searchAcrossFields } from "@/lib/searchUtils";
 
 interface EstoqueItem {
   id: string;
@@ -346,13 +347,11 @@ const Estoque = () => {
   // Filter and sort items
   const filteredItems = useMemo(() => {
     let result = items.filter((item) => {
-      const matchesSearch =
-        !searchQuery ||
-        item.codigo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.codigo_barras?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.marca?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.referencia?.toLowerCase().includes(searchQuery.toLowerCase());
+      // Busca por múltiplas palavras - todas devem estar presentes
+      const matchesSearch = searchAcrossFields(
+        [item.codigo, item.codigo_barras, item.nome, item.marca, item.referencia, item.grupo, item.subgrupo],
+        searchQuery
+      );
 
       const matchesGrupo = grupoFilter === "all" || item.grupo === grupoFilter;
       const matchesMarca = marcaFilter === "all" || item.marca === marcaFilter;

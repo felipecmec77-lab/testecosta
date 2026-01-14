@@ -20,6 +20,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { searchAcrossFields } from '@/lib/searchUtils';
 
 interface ProdutoCotacao {
   id: string;
@@ -97,13 +98,8 @@ const SelecionarProdutosModal = ({
   // Produtos filtrados
   const produtosFiltrados = useMemo(() => {
     return produtos.filter(p => {
-      const matchSearch = !searchTerm || 
-        p.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.codigo_barras?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.marca?.toLowerCase().includes(searchTerm.toLowerCase());
-      
+      const matchSearch = searchAcrossFields([p.nome, p.codigo_barras, p.marca, p.categoria], searchTerm);
       const matchCategoria = !selectedCategoria || p.categoria === selectedCategoria;
-      
       return matchSearch && matchCategoria;
     });
   }, [produtos, searchTerm, selectedCategoria]);

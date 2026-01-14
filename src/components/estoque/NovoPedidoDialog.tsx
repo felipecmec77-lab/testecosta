@@ -15,6 +15,7 @@ import { CalendarIcon, Search, Plus, Trash2, Package, AlertTriangle, Save, Send,
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { searchAcrossFields } from "@/lib/searchUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -125,12 +126,9 @@ export function NovoPedidoDialog({
   // Filter products based on search
   const filteredProducts = useMemo(() => {
     if (!searchTerm || searchTerm.length < 2) return [];
-    const term = searchTerm.toLowerCase();
     return estoqueItems
       .filter(item => 
-        item.nome.toLowerCase().includes(term) ||
-        item.codigo.toLowerCase().includes(term) ||
-        (item.codigo_barras && item.codigo_barras.includes(term))
+        searchAcrossFields([item.nome, item.codigo, item.codigo_barras, item.marca], searchTerm)
       )
       .slice(0, 20);
   }, [searchTerm, estoqueItems]);

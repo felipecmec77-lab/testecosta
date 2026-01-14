@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { searchAcrossFields } from "@/lib/searchUtils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -230,10 +231,7 @@ export function FornecedoresManager({ onFornecedorChange }: FornecedoresManagerP
   };
 
   const filteredFornecedores = fornecedores.filter(
-    (f) =>
-      f.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      f.cnpj?.includes(searchTerm) ||
-      f.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    (f) => searchAcrossFields([f.nome, f.cnpj, f.email, f.contato, f.telefone], searchTerm)
   );
 
   const stats = {

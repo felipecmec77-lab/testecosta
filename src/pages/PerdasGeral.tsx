@@ -41,6 +41,7 @@ import {
 import { format } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import { ptBR } from 'date-fns/locale';
+import { searchAcrossFields } from '@/lib/searchUtils';
 import { 
   BarChart, 
   Bar, 
@@ -1573,17 +1574,13 @@ const PerdasGeral = () => {
   };
 
   const filteredCatalogItems = catalogItems.filter(item =>
-    item.nome_item.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-    (item.codigo_barras && item.codigo_barras.includes(catalogSearch)) ||
-    (item.marca && item.marca.toLowerCase().includes(catalogSearch.toLowerCase()))
+    searchAcrossFields([item.nome_item, item.codigo_barras, item.marca, item.categoria], catalogSearch)
   );
 
   // Real-time search suggestions based on barcode input
   const searchSuggestions = barcodeInput.trim().length >= 2 
     ? catalogItems.filter(item =>
-        item.nome_item.toLowerCase().includes(barcodeInput.toLowerCase()) ||
-        (item.codigo_barras && item.codigo_barras.includes(barcodeInput)) ||
-        (item.marca && item.marca.toLowerCase().includes(barcodeInput.toLowerCase()))
+        searchAcrossFields([item.nome_item, item.codigo_barras, item.marca], barcodeInput)
       ).slice(0, 8)
     : [];
 

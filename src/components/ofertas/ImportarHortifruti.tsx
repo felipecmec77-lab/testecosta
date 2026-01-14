@@ -21,6 +21,7 @@ import {
   Sparkles,
   Check
 } from 'lucide-react';
+import { searchMultiWord } from '@/lib/searchUtils';
 
 interface ProdutoEstoque {
   id: string;
@@ -127,7 +128,7 @@ export function ImportarHortifruti({ onVoltar, onConfirmar }: ImportarHortifruti
   };
 
   const filteredProdutos = produtos.filter(p => {
-    const matchesSearch = p.nome.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = searchMultiWord(p.nome, searchTerm);
     const matchesVisibility = mostrarOcultos || !p.oculto_ofertas;
     return matchesSearch && matchesVisibility;
   });

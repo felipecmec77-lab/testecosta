@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Camera, Keyboard, Search, History, X, Package, Delete } from 'lucide-react';
 import { toast } from 'sonner';
+import { searchAcrossFields } from '@/lib/searchUtils';
 
 interface ManualBarcodeInputProps {
   open: boolean;
@@ -43,8 +44,7 @@ const ManualBarcodeInput = ({ open, onOpenChange, onSubmit, onScannerOpen, catal
   useEffect(() => {
     if (barcode.length >= 2) {
       const results = catalogItems.filter(item =>
-        item.nome_item.toLowerCase().includes(barcode.toLowerCase()) ||
-        (item.codigo_barras && item.codigo_barras.includes(barcode))
+        searchAcrossFields([item.nome_item, item.codigo_barras], barcode)
       ).slice(0, 6);
       setSearchResults(results);
     } else {
