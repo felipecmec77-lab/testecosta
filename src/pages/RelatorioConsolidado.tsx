@@ -103,7 +103,7 @@ const RelatorioConsolidado = () => {
 
         let hortifrutiQuery = supabase
           .from('perdas')
-          .select(`*, produtos(nome_produto, categoria, preco_unitario, unidade_medida)`)
+          .select(`*, estoque(nome, grupo, preco_custo, unidade)`)
           .gte('data_perda', start)
           .lte('data_perda', end);
 
@@ -114,10 +114,10 @@ const RelatorioConsolidado = () => {
         const { data: hortifrutiData } = await hortifrutiQuery;
         
         if (hortifrutiData) {
-          hortifrutiData.forEach(item => {
-            const isKg = item.produtos?.unidade_medida === 'kg';
+          hortifrutiData.forEach((item: any) => {
+            const isKg = item.estoque?.unidade === 'kg' || item.estoque?.unidade === 'KG';
             const qty = isKg ? (item.peso_perdido || 0) : (item.quantidade_perdida || 0);
-            const valorPerda = qty * (item.produtos?.preco_unitario || 0);
+            const valorPerda = qty * (item.estoque?.preco_custo || 0);
             
             allLosses.push({
               id: item.id,
@@ -126,7 +126,12 @@ const RelatorioConsolidado = () => {
               valor_perda: valorPerda,
               peso_perdido: item.peso_perdido,
               quantidade_perdida: item.quantidade_perdida,
-              produto: item.produtos,
+              produto: item.estoque ? {
+                nome_produto: item.estoque.nome,
+                categoria: item.estoque.grupo || 'Sem categoria',
+                preco_unitario: item.estoque.preco_custo,
+                unidade_medida: item.estoque.unidade || 'UN'
+              } : null,
               source: 'hortifruti'
             });
           });

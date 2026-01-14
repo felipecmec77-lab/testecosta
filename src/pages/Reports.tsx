@@ -22,11 +22,11 @@ interface ReportData {
   motivo_perda: string;
   data_perda: string;
   criado_em: string;
-  produtos?: {
-    nome_produto: string;
-    preco_unitario: number;
-    categoria: string;
-    unidade_medida: string;
+  estoque?: {
+    nome: string;
+    preco_custo: number;
+    grupo: string;
+    unidade: string;
   };
   profiles?: {
     nome: string;
@@ -54,8 +54,8 @@ const Reports = () => {
   }, []);
 
   const fetchProducts = async () => {
-    const { data } = await supabase.from('produtos').select('id, nome_produto').order('nome_produto');
-    if (data) setProducts(data);
+    const { data } = await supabase.from('estoque').select('id, nome').eq('ativo', true).order('nome');
+    if (data) setProducts(data.map(p => ({ id: p.id, nome_produto: p.nome })));
   };
 
   const fetchReport = async () => {
@@ -74,7 +74,7 @@ const Reports = () => {
         .from('perdas')
         .select(`
           *,
-          produtos (nome_produto, preco_unitario, categoria, unidade_medida)
+          estoque (nome, preco_custo, grupo, unidade)
         `)
         .gte('data_perda', filters.startDate)
         .lte('data_perda', filters.endDate)
@@ -93,10 +93,10 @@ const Reports = () => {
 
       if (error) throw error;
 
-      let filtered = perdasData || [];
+      let filtered = (perdasData || []) as any[];
       
       if (filters.category !== 'all') {
-        filtered = filtered.filter(item => item.produtos?.categoria === filters.category);
+        filtered = filtered.filter(item => item.estoque?.grupo === filters.category);
       }
 
       // Fetch profile names separately
@@ -143,15 +143,15 @@ const Reports = () => {
     try {
       const headers = ['Data', 'Produto', 'Categoria', 'Unidade', 'Quantidade', 'Valor', 'Motivo', 'Operador'];
       const rows = data.map(item => {
-        const isKg = item.produtos?.unidade_medida === 'kg';
+        const isKg = item.estoque?.unidade === 'kg' || item.estoque?.unidade === 'KG';
         const qty = isKg ? (item.peso_perdido || 0) : (item.quantidade_perdida || 0);
-        const value = qty * (item.produtos?.preco_unitario || 0);
+        const value = qty * (item.estoque?.preco_custo || 0);
         
         return [
           format(new Date(item.data_perda), 'dd/MM/yyyy'),
-          item.produtos?.nome_produto || '',
-          item.produtos?.categoria || '',
-          item.produtos?.unidade_medida || '',
+          item.estoque?.nome || '',
+          item.estoque?.grupo || '',
+          item.estoque?.unidade || '',
           qty.toFixed(2),
           value.toFixed(2),
           item.motivo_perda,
@@ -210,13 +210,13 @@ const Reports = () => {
       };
       
       const tableData = data.map(item => {
-        const isKg = item.produtos?.unidade_medida === 'kg';
+        const isKg = item.estoque?.unidade === 'kg' || item.estoque?.unidade === 'KG';
         const qty = isKg ? (item.peso_perdido || 0) : (item.quantidade_perdida || 0);
-        const value = qty * (item.produtos?.preco_unitario || 0);
+        const value = qty * (item.estoque?.preco_custo || 0);
         
         return [
           format(new Date(item.data_perda), 'dd/MM/yyyy'),
-          (item.produtos?.nome_produto || '').toUpperCase(),
+          (item.estoque?.nome || '').toUpperCase(),
           `${formatBRL(qty)} ${isKg ? 'kg' : 'un'}`,
           `R$ ${formatBRL(value)}`,
           item.motivo_perda.charAt(0).toUpperCase() + item.motivo_perda.slice(1),
@@ -225,9 +225,9 @@ const Reports = () => {
       
       // Calculate total for footer
       const totalValorPerdas = data.reduce((sum, item) => {
-        const isKg = item.produtos?.unidade_medida === 'kg';
+        const isKg = item.estoque?.unidade === 'kg' || item.estoque?.unidade === 'KG';
         const qty = isKg ? (item.peso_perdido || 0) : (item.quantidade_perdida || 0);
-        return sum + qty * (item.produtos?.preco_unitario || 0);
+        return sum + qty * (item.estoque?.preco_custo || 0);
       }, 0);
       
       autoTable(doc, {
@@ -291,14 +291,14 @@ const Reports = () => {
   };
 
   const totalQuantity = data.reduce((sum, item) => {
-    const isKg = item.produtos?.unidade_medida === 'kg';
+    const isKg = item.estoque?.unidade === 'kg' || item.estoque?.unidade === 'KG';
     return sum + (isKg ? (item.peso_perdido || 0) : (item.quantidade_perdida || 0));
   }, 0);
   
   const totalValue = data.reduce((sum, item) => {
-    const isKg = item.produtos?.unidade_medida === 'kg';
+    const isKg = item.estoque?.unidade === 'kg' || item.estoque?.unidade === 'KG';
     const qty = isKg ? (item.peso_perdido || 0) : (item.quantidade_perdida || 0);
-    return sum + qty * (item.produtos?.preco_unitario || 0);
+    return sum + qty * (item.estoque?.preco_custo || 0);
   }, 0);
 
   return (
@@ -447,9 +447,9 @@ const Reports = () => {
                     </TableRow>
                   ) : (
                     data.map(item => {
-                      const isKg = item.produtos?.unidade_medida === 'kg';
+                      const isKg = item.estoque?.unidade === 'kg' || item.estoque?.unidade === 'KG';
                       const qty = isKg ? (item.peso_perdido || 0) : (item.quantidade_perdida || 0);
-                      const value = qty * (item.produtos?.preco_unitario || 0);
+                      const value = qty * (item.estoque?.preco_custo || 0);
                       
                       return (
                         <TableRow key={item.id}>
@@ -457,13 +457,13 @@ const Reports = () => {
                             {format(new Date(item.data_perda), 'dd/MM/yyyy', { locale: ptBR })}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {item.produtos?.nome_produto || 'N/A'}
+                            {item.estoque?.nome || 'N/A'}
                           </TableCell>
                           <TableCell className="capitalize">
-                            {item.produtos?.categoria || 'N/A'}
+                            {item.estoque?.grupo || 'N/A'}
                           </TableCell>
                           <TableCell className="capitalize">
-                            {item.produtos?.unidade_medida || 'N/A'}
+                            {item.estoque?.unidade || 'N/A'}
                           </TableCell>
                           <TableCell className="text-right">{qty.toFixed(2)}</TableCell>
                           <TableCell className="text-right text-destructive font-medium">

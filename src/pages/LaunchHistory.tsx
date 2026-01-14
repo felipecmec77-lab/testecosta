@@ -28,9 +28,9 @@ interface Perda {
   motivo_perda: string;
   valor_perda: number | null;
   observacao: string | null;
-  produtos?: {
-    nome_produto: string;
-    unidade_medida: string;
+  estoque?: {
+    nome: string;
+    unidade: string;
   };
 }
 
@@ -114,7 +114,7 @@ const LaunchHistory = () => {
         .from('perdas')
         .select(`
           *,
-          produtos(nome_produto, unidade_medida)
+          estoque(nome, unidade)
         `)
         .eq('lancamento_id', launchId)
         .order('criado_em', { ascending: true });
@@ -123,7 +123,7 @@ const LaunchHistory = () => {
         setLaunches(prev => 
           prev.map(launch => 
             launch.id === launchId 
-              ? { ...launch, perdas: perdasData as Perda[] }
+              ? { ...launch, perdas: perdasData as unknown as Perda[] }
               : launch
           )
         );
@@ -160,7 +160,7 @@ const LaunchHistory = () => {
   };
 
   const formatQuantity = (perda: Perda) => {
-    if (perda.produtos?.unidade_medida === 'kg' && perda.peso_perdido) {
+    if (perda.estoque?.unidade === 'kg' && perda.peso_perdido) {
       return `${perda.peso_perdido} kg`;
     }
     if (perda.quantidade_perdida) {
@@ -274,7 +274,7 @@ const LaunchHistory = () => {
                             {launch.perdas.map((perda) => (
                               <TableRow key={perda.id}>
                                 <TableCell className="font-medium">
-                                  {perda.produtos?.nome_produto || 'Produto não encontrado'}
+                                  {perda.estoque?.nome || 'Produto não encontrado'}
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-1">
