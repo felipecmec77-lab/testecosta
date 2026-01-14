@@ -71,7 +71,7 @@ const HortifrutiDashboard = () => {
           motivo_perda,
           data_perda,
           lancamento_id,
-          estoque (
+          estoque!perdas_produto_id_estoque_fkey (
             nome,
             preco_custo,
             unidade

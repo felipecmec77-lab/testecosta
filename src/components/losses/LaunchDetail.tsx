@@ -46,7 +46,7 @@ const LaunchDetail = ({ launch, onClose, onRefresh }: LaunchDetailProps) => {
           quantidade_perdida,
           motivo_perda,
           observacao,
-          estoque (nome, preco_custo, unidade)
+          estoque!perdas_produto_id_estoque_fkey (nome, preco_custo, unidade)
         `)
         .eq('lancamento_id', launch.id);
 

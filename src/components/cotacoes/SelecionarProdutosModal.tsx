@@ -143,12 +143,30 @@ const SelecionarProdutosModal = ({
 
   // Produtos filtrados
   const produtosFiltrados = useMemo(() => {
+    const termoBusca = searchTerm.trim().toLowerCase();
+    
     return produtos.filter(p => {
       // Filtrar subgrupos ocultos
       if (p.subgrupo && subgruposOcultos.includes(p.subgrupo)) {
         return false;
       }
-      const matchSearch = searchAcrossFields([p.nome, p.codigo_barras, p.marca, p.grupo], searchTerm);
+      
+      // Se não há termo de busca, mostrar todos
+      if (!termoBusca) return true;
+      
+      // Busca por código de barras (comparação exata ou parcial)
+      if (p.codigo_barras) {
+        const codigoNormalizado = p.codigo_barras.replace(/^0+/, ''); // Remove zeros à esquerda
+        const termoNormalizado = termoBusca.replace(/^0+/, '');
+        if (p.codigo_barras.includes(termoBusca) || 
+            codigoNormalizado.includes(termoNormalizado) ||
+            p.codigo_barras === termoBusca) {
+          return true;
+        }
+      }
+      
+      // Busca em outros campos
+      const matchSearch = searchAcrossFields([p.nome, p.marca, p.grupo], termoBusca);
       return matchSearch;
     });
   }, [produtos, searchTerm, subgruposOcultos]);

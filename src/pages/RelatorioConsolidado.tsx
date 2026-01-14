@@ -103,7 +103,7 @@ const RelatorioConsolidado = () => {
 
         let hortifrutiQuery = supabase
           .from('perdas')
-          .select(`*, estoque(nome, grupo, preco_custo, unidade)`)
+          .select(`*, estoque!perdas_produto_id_estoque_fkey(nome, grupo, preco_custo, unidade)`)
           .gte('data_perda', start)
           .lte('data_perda', end);
 
