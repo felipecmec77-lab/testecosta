@@ -44,13 +44,22 @@ interface Product {
   preco_venda: number | null;
 }
 
+interface EstoqueProduct {
+  id: string;
+  nome: string;
+  estoque_atual: number;
+  unidade: string;
+  preco_custo: number;
+  preco_venda: number | null;
+}
+
 // Helper function to format prices with comma
 const formatarPreco = (valor: number): string => {
   return valor.toFixed(2).replace('.', ',');
 };
 
 const Hortifruti = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('perdas');
   const [products, setProducts] = useState<Product[]>([]);
   const [launches, setLaunches] = useState<Launch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,18 +72,32 @@ const Hortifruti = () => {
 
   const fetchData = async () => {
     try {
-      // Fetch products
-      const { data: productsData, error: productsError } = await supabase
-        .from('produtos')
-        .select('*')
-        .order('nome_produto');
+      // Fetch products from ESTOQUE with subgrupo HORTIFRUTI
+      const { data: estoqueData, error: estoqueError } = await supabase
+        .from('estoque')
+        .select('id, nome, estoque_atual, unidade, preco_custo, preco_venda')
+        .or('subgrupo.ilike.%hortifruti%,subgrupo.ilike.%horti%')
+        .eq('ativo', true)
+        .order('nome');
       
-      if (productsError) {
-        console.error('Erro ao buscar produtos:', productsError);
+      if (estoqueError) {
+        console.error('Erro ao buscar produtos do estoque:', estoqueError);
       }
       
-      console.log('Produtos carregados:', productsData?.length);
-      if (productsData) setProducts(productsData);
+      console.log('Produtos hortifruti carregados:', estoqueData?.length);
+      
+      // Transform estoque data to Product format
+      if (estoqueData) {
+        const transformedProducts: Product[] = estoqueData.map(item => ({
+          id: item.id,
+          nome_produto: item.nome,
+          quantidade_estoque: item.estoque_atual,
+          unidade_medida: item.unidade || 'UN',
+          preco_unitario: item.preco_custo,
+          preco_venda: item.preco_venda
+        }));
+        setProducts(transformedProducts);
+      }
 
       // Fetch launches with counts
       const { data: launchesData } = await supabase

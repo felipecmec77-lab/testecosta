@@ -115,7 +115,23 @@ const ScannerDialog = ({ open, onOpenChange, items, onEditProduct }: ScannerDial
   const startScanning = async () => {
     try {
       // Wait for the container to be rendered
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Check if the element exists
+      const element = document.getElementById("scanner-reader");
+      if (!element) {
+        console.warn("Scanner element not found");
+        return;
+      }
+
+      // Stop any existing scanner first
+      if (html5QrCodeRef.current) {
+        try {
+          await html5QrCodeRef.current.stop();
+        } catch {
+          // Ignore stop errors
+        }
+      }
       
       const html5QrCode = new Html5Qrcode("scanner-reader");
       html5QrCodeRef.current = html5QrCode;
@@ -135,12 +151,16 @@ const ScannerDialog = ({ open, onOpenChange, items, onEditProduct }: ScannerDial
         }
       );
       setIsScanning(true);
-    } catch (error) {
-      toast({
-        title: "Erro ao iniciar câmera",
-        description: "Verifique as permissões de câmera",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      console.error("Camera error:", error);
+      // Only show error if it's not a permission or camera not found error
+      if (error?.message?.includes("Permission") || error?.message?.includes("Camera")) {
+        toast({
+          title: "Erro ao iniciar câmera",
+          description: "Verifique as permissões de câmera",
+          variant: "destructive",
+        });
+      }
     }
   };
 
