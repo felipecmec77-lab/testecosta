@@ -1,9 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -14,7 +13,6 @@ import {
   ShoppingCart, 
   Plus, 
   X, 
-  Filter,
   Package,
   Minus,
   Trash2,
@@ -27,6 +25,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+
+type TipoUnidade = 'UN' | 'CX' | 'DP';
 
 interface ProdutoEstoque {
   id: string;
@@ -41,6 +49,7 @@ interface ProdutoEstoque {
 interface ItemCarrinho {
   produto: ProdutoEstoque;
   quantidade: number;
+  tipoUnidade: TipoUnidade;
 }
 
 interface SelecionarProdutosModalProps {
@@ -50,6 +59,12 @@ interface SelecionarProdutosModalProps {
   cotacaoTitulo: string;
   onProdutosAdicionados: () => void;
 }
+
+const UNIDADES: { value: TipoUnidade; label: string }[] = [
+  { value: 'UN', label: 'Unidade' },
+  { value: 'CX', label: 'Caixa' },
+  { value: 'DP', label: 'Display' },
+];
 
 const SelecionarProdutosModal = ({ 
   open, 
@@ -68,6 +83,7 @@ const SelecionarProdutosModal = ({
   const [showCarrinho, setShowCarrinho] = useState(false);
   const [saving, setSaving] = useState(false);
   const [subgruposOcultos, setSubgruposOcultos] = useState<string[]>([]);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
 
   useEffect(() => {
     if (open) {
@@ -75,14 +91,13 @@ const SelecionarProdutosModal = ({
       loadSubgruposOcultos();
       setCarrinho([]);
       setSearchTerm('');
-      
+      setFocusedIndex(-1);
     }
   }, [open]);
 
   const fetchProdutos = async () => {
     setLoading(true);
     try {
-      // Buscar todos os produtos em lotes de 1000 para evitar limite do Supabase
       const allProducts: ProdutoEstoque[] = [];
       let offset = 0;
       const batchSize = 1000;
@@ -150,7 +165,6 @@ const SelecionarProdutosModal = ({
     }
   };
 
-
   // Subgrupos únicos
   const subgrupos = useMemo(() => {
     const subs = produtos
@@ -164,17 +178,14 @@ const SelecionarProdutosModal = ({
     const termoBusca = searchTerm.trim().toLowerCase();
     
     return produtos.filter(p => {
-      // Filtrar subgrupos ocultos
       if (p.subgrupo && subgruposOcultos.includes(p.subgrupo)) {
         return false;
       }
       
-      // Se não há termo de busca, mostrar todos
       if (!termoBusca) return true;
       
-      // Busca por código de barras (comparação exata ou parcial)
       if (p.codigo_barras) {
-        const codigoNormalizado = p.codigo_barras.replace(/^0+/, ''); // Remove zeros à esquerda
+        const codigoNormalizado = p.codigo_barras.replace(/^0+/, '');
         const termoNormalizado = termoBusca.replace(/^0+/, '');
         if (p.codigo_barras.includes(termoBusca) || 
             codigoNormalizado.includes(termoNormalizado) ||
@@ -183,7 +194,6 @@ const SelecionarProdutosModal = ({
         }
       }
       
-      // Busca em outros campos
       const matchSearch = searchAcrossFields([p.nome, p.marca, p.grupo], termoBusca);
       return matchSearch;
     });
@@ -199,7 +209,19 @@ const SelecionarProdutosModal = ({
   // Reset page when search changes
   useEffect(() => {
     setCurrentPage(1);
+    setFocusedIndex(-1);
   }, [searchTerm]);
+
+  // Toggle de seleção
+  const toggleProduto = useCallback((produto: ProdutoEstoque) => {
+    setCarrinho(prev => {
+      const existing = prev.find(item => item.produto.id === produto.id);
+      if (existing) {
+        return prev.filter(item => item.produto.id !== produto.id);
+      }
+      return [...prev, { produto, quantidade: 1, tipoUnidade: 'UN' as TipoUnidade }];
+    });
+  }, []);
 
   // Funções do carrinho
   const addToCarrinho = (produto: ProdutoEstoque) => {
@@ -212,7 +234,7 @@ const SelecionarProdutosModal = ({
             : item
         );
       }
-      return [...prev, { produto, quantidade: 1 }];
+      return [...prev, { produto, quantidade: 1, tipoUnidade: 'UN' as TipoUnidade }];
     });
   };
 
@@ -230,6 +252,12 @@ const SelecionarProdutosModal = ({
     ));
   };
 
+  const updateTipoUnidade = (produtoId: string, tipoUnidade: TipoUnidade) => {
+    setCarrinho(prev => prev.map(item => 
+      item.produto.id === produtoId ? { ...item, tipoUnidade } : item
+    ));
+  };
+
   const isInCarrinho = (produtoId: string) => {
     return carrinho.some(item => item.produto.id === produtoId);
   };
@@ -238,9 +266,35 @@ const SelecionarProdutosModal = ({
     return carrinho.find(item => item.produto.id === produtoId)?.quantidade || 0;
   };
 
+  const getTipoUnidadeCarrinho = (produtoId: string): TipoUnidade => {
+    return carrinho.find(item => item.produto.id === produtoId)?.tipoUnidade || 'UN';
+  };
+
   const totalItensCarrinho = carrinho.reduce((sum, item) => sum + item.quantidade, 0);
 
-  // Salvar itens na cotação
+  // Keyboard navigation
+  const handleKeyDown = useCallback((e: React.KeyboardEvent, produto: ProdutoEstoque, index: number) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      toggleProduto(produto);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedIndex(Math.min(index + 1, paginatedProdutos.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedIndex(Math.max(index - 1, 0));
+    }
+  }, [toggleProduto, paginatedProdutos.length]);
+
+  // Focus management
+  useEffect(() => {
+    if (focusedIndex >= 0) {
+      const element = document.getElementById(`produto-row-${focusedIndex}`);
+      element?.focus();
+    }
+  }, [focusedIndex]);
+
+  // Salvar itens na cotação - NÃO enviar produto_id pois referencia tabela produtos_cotacao
   const salvarItens = async () => {
     if (carrinho.length === 0) {
       toast.error('Adicione pelo menos um produto');
@@ -251,10 +305,10 @@ const SelecionarProdutosModal = ({
     try {
       const itens = carrinho.map(item => ({
         cotacao_id: cotacaoId,
-        nome_produto: item.produto.nome,
+        nome_produto: `${item.produto.nome} (${item.tipoUnidade})`,
         quantidade: item.quantidade,
         codigo_barras: item.produto.codigo_barras,
-        produto_id: item.produto.id
+        observacao: `Tipo: ${UNIDADES.find(u => u.value === item.tipoUnidade)?.label || item.tipoUnidade}`
       }));
 
       const { error } = await supabase.from('itens_cotacao').insert(itens);
@@ -323,7 +377,7 @@ const SelecionarProdutosModal = ({
                   <Settings2 className="w-4 h-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80" align="end">
+              <PopoverContent className="w-80 bg-popover border shadow-lg z-50" align="end">
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-medium text-sm mb-2">Ocultar Subgrupos</h4>
@@ -362,7 +416,10 @@ const SelecionarProdutosModal = ({
                 </div>
               </PopoverContent>
             </Popover>
-        </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            💡 Dica: Clique na linha ou pressione <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">Espaço</kbd> para selecionar um produto
+          </p>
         </div>
 
         {/* Products List */}
@@ -409,54 +466,82 @@ const SelecionarProdutosModal = ({
               </div>
 
               {/* Table Header */}
-              <div className="grid grid-cols-[auto_1fr_120px_100px_120px] gap-4 px-3 py-2 text-xs font-medium text-muted-foreground uppercase border-b">
-                <div className="w-10"></div>
-                <div>Nome do Produto</div>
+              <div className="grid grid-cols-[1fr_100px_120px_100px_100px] gap-4 px-3 py-2 text-xs font-medium text-muted-foreground uppercase border-b">
+                <div>Produto</div>
+                <div className="text-center">Unidade</div>
                 <div className="text-center">Quantidade</div>
                 <div className="text-center">Marca</div>
                 <div className="text-center">Categoria</div>
               </div>
 
               {/* Products */}
-              {paginatedProdutos.map((produto) => {
+              {paginatedProdutos.map((produto, index) => {
                 const inCarrinho = isInCarrinho(produto.id);
                 const quantidade = getQuantidadeCarrinho(produto.id);
+                const tipoUnidade = getTipoUnidadeCarrinho(produto.id);
 
                 return (
                   <div 
                     key={produto.id}
+                    id={`produto-row-${index}`}
+                    tabIndex={0}
+                    role="button"
+                    onClick={() => toggleProduto(produto)}
+                    onKeyDown={(e) => handleKeyDown(e, produto, index)}
                     className={cn(
-                      "grid grid-cols-[auto_1fr_120px_100px_120px] gap-4 px-3 py-3 items-center border-b hover:bg-muted/50 transition-colors",
-                      inCarrinho && "bg-primary/5"
+                      "grid grid-cols-[1fr_100px_120px_100px_100px] gap-4 px-3 py-3 items-center border-b transition-colors cursor-pointer outline-none",
+                      "hover:bg-muted/50 focus:bg-muted/50 focus:ring-2 focus:ring-primary/20",
+                      inCarrinho && "bg-primary/10 hover:bg-primary/15"
                     )}
                   >
-                    {/* Checkbox / Image */}
-                    <div className="flex items-center gap-3">
-                      <Checkbox 
-                        checked={inCarrinho}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            addToCarrinho(produto);
-                          } else {
-                            removeFromCarrinho(produto.id);
-                          }
-                        }}
-                      />
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0">
-                        <Package className="w-6 h-6 text-muted-foreground" />
+                    {/* Produto Info */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={cn(
+                        "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                        inCarrinho ? "bg-primary border-primary" : "border-muted-foreground/30"
+                      )}>
+                        {inCarrinho && (
+                          <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0">
+                        <Package className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{produto.nome}</p>
+                        {produto.codigo_barras && (
+                          <p className="text-xs text-muted-foreground font-mono">{produto.codigo_barras}</p>
+                        )}
                       </div>
                     </div>
 
-                    {/* Nome e Código */}
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">{produto.nome}</p>
-                      {produto.codigo_barras && (
-                        <p className="text-xs text-muted-foreground font-mono">{produto.codigo_barras}</p>
+                    {/* Tipo Unidade */}
+                    <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
+                      {inCarrinho ? (
+                        <Select 
+                          value={tipoUnidade} 
+                          onValueChange={(value) => updateTipoUnidade(produto.id, value as TipoUnidade)}
+                        >
+                          <SelectTrigger className="w-20 h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border shadow-lg z-[100]">
+                            {UNIDADES.map(u => (
+                              <SelectItem key={u.value} value={u.value} className="text-xs">
+                                {u.value}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">UN</span>
                       )}
                     </div>
 
                     {/* Quantidade */}
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
                       {inCarrinho ? (
                         <div className="flex items-center gap-1">
                           <Button 
@@ -484,9 +569,7 @@ const SelecionarProdutosModal = ({
                           </Button>
                         </div>
                       ) : (
-                        <span className="text-sm text-muted-foreground">
-                          1 {produto.unidade || 'UN'}
-                        </span>
+                        <span className="text-sm text-muted-foreground">-</span>
                       )}
                     </div>
 
@@ -563,7 +646,9 @@ const SelecionarProdutosModal = ({
                       </div>
                       <div>
                         <p className="text-sm font-medium">{item.produto.nome}</p>
-                        <p className="text-xs text-muted-foreground">Qtd: {item.quantidade}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Qtd: {item.quantidade} {item.tipoUnidade === 'CX' ? 'Caixa(s)' : item.tipoUnidade === 'DP' ? 'Display(s)' : 'Unidade(s)'}
+                        </p>
                       </div>
                     </div>
                     <Button 
