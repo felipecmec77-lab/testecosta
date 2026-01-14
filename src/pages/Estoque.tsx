@@ -1085,10 +1085,122 @@ const Estoque = () => {
   return (
     <MainLayout>
       <div className="space-y-4">
-        {/* Tabs - Styled like reference */}
+        {/* Tabs - Desktop/Tablet layout */}
         <Tabs defaultValue="produtos" className="space-y-4">
-          {/* All buttons in a single row, left to right */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Mobile Layout - Grid organizado */}
+          <div className="md:hidden space-y-3">
+            {/* Abas principais - Grid 3x2 */}
+            <TabsList className="grid grid-cols-3 gap-1.5 h-auto p-1 bg-muted/50 rounded-xl">
+              <TabsTrigger 
+                value="produtos" 
+                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-lg text-[10px] font-bold transition-all
+                  data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-md
+                  data-[state=inactive]:bg-background data-[state=inactive]:text-muted-foreground"
+              >
+                <Package className="h-5 w-5" />
+                PRODUTOS
+              </TabsTrigger>
+              <TabsTrigger 
+                value="categorias" 
+                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-lg text-[10px] font-bold transition-all
+                  data-[state=active]:bg-cyan-500 data-[state=active]:text-white data-[state=active]:shadow-md
+                  data-[state=inactive]:bg-background data-[state=inactive]:text-muted-foreground"
+              >
+                <Layers className="h-5 w-5" />
+                CATEGORIAS
+              </TabsTrigger>
+              <TabsTrigger 
+                value="etiquetas" 
+                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-lg text-[10px] font-bold transition-all
+                  data-[state=active]:bg-lime-500 data-[state=active]:text-white data-[state=active]:shadow-md
+                  data-[state=inactive]:bg-background data-[state=inactive]:text-muted-foreground"
+              >
+                <Tag className="h-5 w-5" />
+                ETIQUETAS
+              </TabsTrigger>
+              <TabsTrigger 
+                value="pedidos" 
+                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-lg text-[10px] font-bold transition-all
+                  data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md
+                  data-[state=inactive]:bg-background data-[state=inactive]:text-muted-foreground"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                PEDIDOS
+              </TabsTrigger>
+              <TabsTrigger 
+                value="perdas" 
+                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-lg text-[10px] font-bold transition-all
+                  data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=active]:shadow-md
+                  data-[state=inactive]:bg-background data-[state=inactive]:text-muted-foreground"
+              >
+                <AlertTriangle className="h-5 w-5" />
+                PERDAS
+              </TabsTrigger>
+              <TabsTrigger 
+                value="relatorios" 
+                className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-lg text-[10px] font-bold transition-all
+                  data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md
+                  data-[state=inactive]:bg-background data-[state=inactive]:text-muted-foreground"
+              >
+                <BarChart3 className="h-5 w-5" />
+                RELATÓRIOS
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Ações rápidas - Grid 2x2 compacto */}
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={() => setShowScannerDialog(true)}
+                className="h-11 bg-yellow-500 hover:bg-yellow-600 text-white font-bold text-xs gap-2"
+              >
+                <ScanLine className="h-5 w-5" />
+                SCANNER
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="h-11 bg-teal-500 hover:bg-teal-600 text-white font-bold text-xs gap-2 w-full">
+                    <FileSpreadsheet className="h-5 w-5" />
+                    DADOS
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-popover">
+                  <DropdownMenuLabel className="uppercase text-xs font-bold text-teal-600">
+                    <Download className="h-3 w-3 inline mr-1" />
+                    Exportar
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem onClick={handleExport} className="text-xs cursor-pointer">
+                    <Download className="h-4 w-4 mr-2 text-teal-500" />
+                    Todos os Itens
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="uppercase text-xs font-bold text-lime-600">
+                        <Upload className="h-3 w-3 inline mr-1" />
+                        Importar
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => setShowImportDialog(true)} className="text-xs cursor-pointer">
+                        <Upload className="h-4 w-4 mr-2 text-lime-500" />
+                        Planilha XLSX
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {isAdmin && (
+                <Button 
+                  onClick={() => handleOpenProductDialog()}
+                  className="h-11 bg-green-600 hover:bg-green-700 text-white font-bold text-xs gap-2 col-span-2"
+                >
+                  <Plus className="h-5 w-5" />
+                  CADASTRAR PRODUTO
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Desktop Layout - Linha horizontal */}
+          <div className="hidden md:flex flex-wrap items-center gap-2">
             <TabsList className="flex h-auto gap-1 p-1 bg-transparent flex-wrap">
               <TabsTrigger 
                 value="produtos" 
@@ -1146,7 +1258,6 @@ const Estoque = () => {
               </TabsTrigger>
             </TabsList>
 
-            {/* Action buttons - continue in same row */}
             <Button
               onClick={() => setShowScannerDialog(true)}
               className="bg-yellow-500 text-white hover:bg-yellow-600 h-9 px-4 text-xs font-semibold"
@@ -1155,60 +1266,59 @@ const Estoque = () => {
               SCANNER
             </Button>
               
-              {/* Exportar/Importar Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="bg-teal-500 text-white hover:bg-teal-600 h-9 px-4 text-xs font-semibold">
-                    <FileSpreadsheet className="h-4 w-4 mr-2" />
-                    DADOS
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-popover">
-                  <DropdownMenuLabel className="uppercase text-xs font-bold text-teal-600">
-                    <Download className="h-3 w-3 inline mr-1" />
-                    Exportar
-                  </DropdownMenuLabel>
-                  <DropdownMenuItem onClick={handleExport} className="text-xs cursor-pointer">
-                    <Download className="h-4 w-4 mr-2 text-teal-500" />
-                    Todos os Itens
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setCriticalFilter("critical"); setTimeout(handleExport, 100); }} className="text-xs cursor-pointer">
-                    <AlertTriangle className="h-4 w-4 mr-2 text-yellow-500" />
-                    Críticos ({stats.totalCriticos})
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setCriticalFilter("zerado"); setTimeout(handleExport, 100); }} className="text-xs cursor-pointer">
-                    <Package className="h-4 w-4 mr-2 text-gray-500" />
-                    Zerados ({stats.estoquesZerados})
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setCriticalFilter("negativo"); setTimeout(handleExport, 100); }} className="text-xs cursor-pointer">
-                    <TrendingDown className="h-4 w-4 mr-2 text-red-500" />
-                    Negativos ({stats.estoquesNegativos})
-                  </DropdownMenuItem>
-                  {isAdmin && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel className="uppercase text-xs font-bold text-lime-600">
-                        <Upload className="h-3 w-3 inline mr-1" />
-                        Importar
-                      </DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => setShowImportDialog(true)} className="text-xs cursor-pointer">
-                        <Upload className="h-4 w-4 mr-2 text-lime-500" />
-                        Planilha XLSX
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              {isAdmin && (
-                <Button 
-                  onClick={() => handleOpenProductDialog()}
-                  className="bg-green-600 text-white hover:bg-green-700 h-9 px-4 text-xs font-semibold"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  CADASTRAR (F4)
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-teal-500 text-white hover:bg-teal-600 h-9 px-4 text-xs font-semibold">
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  DADOS
                 </Button>
-              )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-popover">
+                <DropdownMenuLabel className="uppercase text-xs font-bold text-teal-600">
+                  <Download className="h-3 w-3 inline mr-1" />
+                  Exportar
+                </DropdownMenuLabel>
+                <DropdownMenuItem onClick={handleExport} className="text-xs cursor-pointer">
+                  <Download className="h-4 w-4 mr-2 text-teal-500" />
+                  Todos os Itens
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setCriticalFilter("critical"); setTimeout(handleExport, 100); }} className="text-xs cursor-pointer">
+                  <AlertTriangle className="h-4 w-4 mr-2 text-yellow-500" />
+                  Críticos ({stats.totalCriticos})
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setCriticalFilter("zerado"); setTimeout(handleExport, 100); }} className="text-xs cursor-pointer">
+                  <Package className="h-4 w-4 mr-2 text-gray-500" />
+                  Zerados ({stats.estoquesZerados})
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setCriticalFilter("negativo"); setTimeout(handleExport, 100); }} className="text-xs cursor-pointer">
+                  <TrendingDown className="h-4 w-4 mr-2 text-red-500" />
+                  Negativos ({stats.estoquesNegativos})
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="uppercase text-xs font-bold text-lime-600">
+                      <Upload className="h-3 w-3 inline mr-1" />
+                      Importar
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setShowImportDialog(true)} className="text-xs cursor-pointer">
+                      <Upload className="h-4 w-4 mr-2 text-lime-500" />
+                      Planilha XLSX
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+              
+            {isAdmin && (
+              <Button 
+                onClick={() => handleOpenProductDialog()}
+                className="bg-green-600 text-white hover:bg-green-700 h-9 px-4 text-xs font-semibold"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                CADASTRAR (F4)
+              </Button>
+            )}
               
             <Button 
               variant="ghost"
@@ -1222,22 +1332,22 @@ const Estoque = () => {
           </div>
 
           <TabsContent value="produtos" className="space-y-4 mt-0">
-            {/* Summary Cards - Interactive */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Summary Cards - Mobile otimizado */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
               <Card 
                 className={`bg-card border-2 hover:shadow-lg transition-all cursor-pointer ${criticalFilter === "all" ? "border-primary ring-2 ring-primary/20" : "border-border"}`}
                 onClick={() => { setCriticalFilter("all"); setCurrentPage(1); }}
               >
-                <CardContent className="p-5">
+                <CardContent className="p-3 md:p-5">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground font-medium">Total de Itens</p>
-                      <p className="text-3xl font-bold mt-1">{stats.totalItems.toLocaleString("pt-BR")}</p>
-                      <p className="text-xs text-primary mt-1 font-medium">
+                      <p className="text-[10px] md:text-sm text-muted-foreground font-medium">Total de Itens</p>
+                      <p className="text-xl md:text-3xl font-bold mt-0.5 md:mt-1">{stats.totalItems.toLocaleString("pt-BR")}</p>
+                      <p className="text-[9px] md:text-xs text-primary mt-0.5 md:mt-1 font-medium hidden md:block">
                         {criticalFilter === "all" ? "✓ Visualizando todos" : "Clique para ver todos"}
                       </p>
                     </div>
-                    <Package className="h-5 w-5 text-primary" />
+                    <Package className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                   </div>
                 </CardContent>
               </Card>
@@ -1246,16 +1356,16 @@ const Estoque = () => {
                 className="bg-card border hover:shadow-lg transition-all cursor-pointer"
                 onClick={() => handleSort("preco_custo")}
               >
-                <CardContent className="p-5">
+                <CardContent className="p-3 md:p-5">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground font-medium">Valor Total (Custo)</p>
-                      <p className="text-3xl font-bold mt-1 text-green-600">{formatCurrency(stats.totalCusto)}</p>
-                      <p className="text-xs text-green-600 mt-1">
+                      <p className="text-[10px] md:text-sm text-muted-foreground font-medium">Valor (Custo)</p>
+                      <p className="text-lg md:text-3xl font-bold mt-0.5 md:mt-1 text-green-600">{formatCurrency(stats.totalCusto)}</p>
+                      <p className="text-[9px] md:text-xs text-green-600 mt-0.5 hidden md:block">
                         {sortField === "preco_custo" ? `Ordenando ${sortDirection === "asc" ? "↑" : "↓"}` : "Clique para ordenar"}
                       </p>
                     </div>
-                    <DollarSign className="h-5 w-5 text-green-500" />
+                    <DollarSign className="h-4 w-4 md:h-5 md:w-5 text-green-500" />
                   </div>
                 </CardContent>
               </Card>
@@ -1264,16 +1374,16 @@ const Estoque = () => {
                 className="bg-card border hover:shadow-lg transition-all cursor-pointer"
                 onClick={() => handleSort("preco_venda")}
               >
-                <CardContent className="p-5">
+                <CardContent className="p-3 md:p-5">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground font-medium">Valor Total (Venda)</p>
-                      <p className="text-3xl font-bold mt-1 text-teal-600">{formatCurrency(stats.totalVenda)}</p>
-                      <p className="text-xs text-teal-600 mt-1">
+                      <p className="text-[10px] md:text-sm text-muted-foreground font-medium">Valor (Venda)</p>
+                      <p className="text-lg md:text-3xl font-bold mt-0.5 md:mt-1 text-teal-600">{formatCurrency(stats.totalVenda)}</p>
+                      <p className="text-[9px] md:text-xs text-teal-600 mt-0.5 hidden md:block">
                         {sortField === "preco_venda" ? `Ordenando ${sortDirection === "asc" ? "↑" : "↓"}` : "Clique para ordenar"}
                       </p>
                     </div>
-                    <DollarSign className="h-5 w-5 text-teal-500" />
+                    <DollarSign className="h-4 w-4 md:h-5 md:w-5 text-teal-500" />
                   </div>
                 </CardContent>
               </Card>
@@ -1291,20 +1401,16 @@ const Estoque = () => {
                   setCurrentPage(1); 
                 }}
               >
-                <CardContent className="p-5">
+                <CardContent className="p-3 md:p-5">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground font-medium">Estoque Crítico</p>
-                      <p className={`text-3xl font-bold mt-1 ${stats.totalCriticos > 0 ? "text-red-600" : ""}`}>
+                      <p className="text-[10px] md:text-sm text-muted-foreground font-medium">Crítico</p>
+                      <p className={`text-xl md:text-3xl font-bold mt-0.5 md:mt-1 ${stats.totalCriticos > 0 ? "text-red-600" : ""}`}>
                         {stats.totalCriticos.toLocaleString("pt-BR")}
                       </p>
-                      <div className="text-xs mt-1 space-y-0.5">
-                        <p className="text-orange-600">{stats.estoquesZerados} zerados</p>
-                        <p className="text-amber-600">{stats.abaixoMinimo} abaixo mín.</p>
-                        <p className="text-red-600">{stats.estoquesNegativos} negativos</p>
-                      </div>
+                      <p className="text-[9px] md:text-xs text-red-600 mt-0.5">{stats.estoquesZerados} zerados</p>
                     </div>
-                    <AlertTriangle className={`h-5 w-5 ${stats.totalCriticos > 0 ? "text-red-500" : "text-muted-foreground"}`} />
+                    <AlertTriangle className={`h-4 w-4 md:h-5 md:w-5 ${stats.totalCriticos > 0 ? "text-red-500" : "text-muted-foreground"}`} />
                   </div>
                 </CardContent>
               </Card>
@@ -1351,114 +1457,166 @@ const Estoque = () => {
               </div>
             )}
 
-        {/* Filters - Clean horizontal row */}
-        <Card className="p-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center">
-            <div className="relative flex-1">
+        {/* Filters - Mobile optimized */}
+        <Card className="p-3 md:p-4">
+          <div className="flex flex-col gap-3">
+            {/* Busca - sempre full width */}
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por código, EAN, nome, marca..."
+                placeholder="Buscar por código, nome, marca..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="pl-9"
+                className="pl-9 h-10"
               />
             </div>
-            <Select value={grupoFilter} onValueChange={(v) => { setGrupoFilter(v); setCurrentPage(1); }}>
-              <SelectTrigger className="w-full md:w-[160px]">
-                <SelectValue placeholder="Subgrupos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os grupos</SelectItem>
-                {grupos.map((g) => (
-                  <SelectItem key={g} value={g!}>{g}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={marcaFilter} onValueChange={(v) => { setMarcaFilter(v); setCurrentPage(1); }}>
-              <SelectTrigger className="w-full md:w-[140px]">
-                <SelectValue placeholder="Marcas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as marcas</SelectItem>
-                {marcas.map((m) => (
-                  <SelectItem key={m} value={m!}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select defaultValue="all">
-              <SelectTrigger className="w-full md:w-[160px]">
-                <SelectValue placeholder="Todos os estoques" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os estoques</SelectItem>
-                <SelectItem value="baixo">Estoque baixo</SelectItem>
-                <SelectItem value="normal">Estoque normal</SelectItem>
-                <SelectItem value="alto">Estoque alto</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Column Configuration */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" title="Filtros avançados">
-                  <Settings2 className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 bg-background border shadow-lg z-50" align="end">
-                <div className="space-y-3">
-                  <div className="font-medium text-sm border-b pb-2">Colunas Visíveis</div>
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {AVAILABLE_COLUMNS.map((col) => (
-                      <label
-                        key={col.key}
-                        className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 p-1 rounded"
-                      >
-                        <Checkbox
-                          checked={isColumnVisible(col.key)}
-                          onCheckedChange={() => toggleColumn(col.key)}
-                        />
-                        {col.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
             
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" title="Configurar colunas">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 bg-background border shadow-lg z-50" align="end">
-                <div className="space-y-3">
-                  <div className="font-medium text-sm border-b pb-2">Colunas Visíveis</div>
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {AVAILABLE_COLUMNS.map((col) => (
-                      <label
-                        key={col.key}
-                        className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 p-1 rounded"
-                      >
-                        <Checkbox
-                          checked={isColumnVisible(col.key)}
-                          onCheckedChange={() => toggleColumn(col.key)}
-                        />
-                        {col.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+            {/* Filtros dropdown - mobile em row, desktop em linha */}
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              <Select value={grupoFilter} onValueChange={(v) => { setGrupoFilter(v); setCurrentPage(1); }}>
+                <SelectTrigger className="min-w-[120px] h-9 text-xs">
+                  <SelectValue placeholder="Grupo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos grupos</SelectItem>
+                  {grupos.map((g) => (
+                    <SelectItem key={g} value={g!}>{g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={marcaFilter} onValueChange={(v) => { setMarcaFilter(v); setCurrentPage(1); }}>
+                <SelectTrigger className="min-w-[100px] h-9 text-xs">
+                  <SelectValue placeholder="Marca" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {marcas.map((m) => (
+                    <SelectItem key={m} value={m!}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* Desktop only: Column config */}
+              <div className="hidden md:flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9" title="Colunas">
+                      <Settings2 className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 bg-background border shadow-lg z-50" align="end">
+                    <div className="space-y-3">
+                      <div className="font-medium text-sm border-b pb-2">Colunas Visíveis</div>
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                        {AVAILABLE_COLUMNS.map((col) => (
+                          <label
+                            key={col.key}
+                            className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 p-1 rounded"
+                          >
+                            <Checkbox
+                              checked={isColumnVisible(col.key)}
+                              onCheckedChange={() => toggleColumn(col.key)}
+                            />
+                            {col.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
           </div>
         </Card>
 
-        {/* Table */}
-        <Card>
+        {/* Mobile: Product Cards List */}
+        <div className="md:hidden space-y-2">
+          {paginatedItems.length === 0 ? (
+            <Card className="p-8 text-center">
+              <PackageX className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground">Nenhum item encontrado</p>
+            </Card>
+          ) : (
+            paginatedItems.map((item) => {
+              const isCritical = item.estoque_atual < 0 || item.estoque_atual === 0;
+              const isBelowMin = item.estoque_atual < item.estoque_minimo && item.estoque_atual > 0;
+              
+              return (
+                <Card 
+                  key={item.id} 
+                  className={`overflow-hidden ${
+                    isCritical ? 'border-l-4 border-l-red-500 bg-red-50/50 dark:bg-red-950/20' : 
+                    isBelowMin ? 'border-l-4 border-l-amber-500 bg-amber-50/50 dark:bg-amber-950/20' : 
+                    ''
+                  }`}
+                >
+                  <CardContent className="p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-mono text-muted-foreground">{item.codigo}</span>
+                          {!item.ativo && <Badge variant="secondary" className="text-[9px]">Inativo</Badge>}
+                        </div>
+                        <p className="font-semibold text-sm truncate">{item.nome}</p>
+                        {item.marca && (
+                          <p className="text-xs text-muted-foreground truncate">{item.marca}</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className={`text-lg font-bold ${isCritical ? 'text-red-600' : isBelowMin ? 'text-amber-600' : 'text-foreground'}`}>
+                          {item.estoque_atual}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">estoque</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                      <div className="flex gap-3 text-xs">
+                        <div>
+                          <span className="text-muted-foreground">Custo: </span>
+                          <span className="font-medium">{formatCurrency(item.preco_custo)}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Venda: </span>
+                          <span className="font-medium text-green-600">{formatCurrency(item.preco_venda)}</span>
+                        </div>
+                      </div>
+                      {isAdmin && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleOpenProductDialog(item)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              setDeletingItem(item);
+                              setShowDeleteDialog(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop: Table */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
@@ -1693,27 +1851,29 @@ const Estoque = () => {
           </CardContent>
         </Card>
 
-        {/* Pagination */}
+        {/* Pagination - Mobile optimized */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} de {filteredItems.length} itens
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 py-2">
+            <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
+              {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} de {filteredItems.length}
             </p>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                size="icon"
+                size="sm"
+                className="h-8 w-8 p-0"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm">
-                Página {currentPage} de {totalPages}
+              <span className="text-xs sm:text-sm min-w-[80px] text-center">
+                {currentPage} / {totalPages}
               </span>
               <Button
                 variant="outline"
-                size="icon"
+                size="sm"
+                className="h-8 w-8 p-0"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
               >
