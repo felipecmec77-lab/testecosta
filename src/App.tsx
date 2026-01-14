@@ -22,7 +22,7 @@ import ConferenciaCoca from "./pages/ConferenciaCoca";
 import Hortifruti from "./pages/Hortifruti";
 import Cotacoes from "./pages/Cotacoes";
 import Estoque from "./pages/Estoque";
-import PerdasGeral from "./pages/PerdasGeral";
+// PerdasGeral movido para aba Perdas do Estoque
 import Ofertas from "./pages/Ofertas";
 import ConfiguracoesEmail from "./pages/ConfiguracoesEmail";
 import DashboardGeral from "./pages/DashboardGeral";
@@ -71,7 +71,7 @@ const App = () => (
               <Route path="/conferencia-coca" element={<ConferenciaCoca />} />
               <Route path="/cotacoes" element={<Cotacoes />} />
               <Route path="/estoque" element={<Estoque />} />
-              <Route path="/perdas-geral" element={<PerdasGeral />} />
+              {/* Perdas Geral movido para aba Perdas do Estoque */}
               <Route path="/ofertas" element={<Ofertas />} />
               <Route path="/configuracoes-email" element={<ConfiguracoesEmail />} />
               <Route path="/encartes" element={<Encartes />} />
