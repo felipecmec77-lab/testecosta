@@ -199,7 +199,7 @@ export type Database = {
             foreignKeyName: "conferencias_coca_produto_coca_id_fkey"
             columns: ["produto_coca_id"]
             isOneToOne: false
-            referencedRelation: "produtos_coca"
+            referencedRelation: "estoque"
             referencedColumns: ["id"]
           },
           {
@@ -244,7 +244,7 @@ export type Database = {
             foreignKeyName: "conferencias_polpas_polpa_id_fkey"
             columns: ["polpa_id"]
             isOneToOne: false
-            referencedRelation: "polpas"
+            referencedRelation: "estoque"
             referencedColumns: ["id"]
           },
         ]
