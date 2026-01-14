@@ -82,14 +82,32 @@ const SelecionarProdutosModal = ({
   const fetchProdutos = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('estoque')
-        .select('id, codigo_barras, nome, marca, grupo, subgrupo, unidade')
-        .eq('ativo', true)
-        .order('nome');
+      // Buscar todos os produtos em lotes de 1000 para evitar limite do Supabase
+      const allProducts: ProdutoEstoque[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-      if (error) throw error;
-      setProdutos(data || []);
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('estoque')
+          .select('id, codigo_barras, nome, marca, grupo, subgrupo, unidade')
+          .eq('ativo', true)
+          .order('nome')
+          .range(offset, offset + batchSize - 1);
+
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          allProducts.push(...data);
+          offset += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setProdutos(allProducts);
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
       toast.error('Erro ao carregar produtos');

@@ -158,17 +158,33 @@ const Ofertas = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch estoque items (tabela estoque - produtos gerais do supermercado)
-      const { data: estoqueData, error: estoqueError } = await supabase
-        .from('estoque')
-        .select('*')
-        .eq('ativo', true)
-        .order('nome', { ascending: true });
+      // Buscar todos os produtos em lotes de 1000 para evitar limite do Supabase
+      const allEstoque: any[] = [];
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-      if (estoqueError) throw estoqueError;
+      while (hasMore) {
+        const { data: estoqueData, error: estoqueError } = await supabase
+          .from('estoque')
+          .select('*')
+          .eq('ativo', true)
+          .order('nome', { ascending: true })
+          .range(offset, offset + batchSize - 1);
+
+        if (estoqueError) throw estoqueError;
+        
+        if (estoqueData && estoqueData.length > 0) {
+          allEstoque.push(...estoqueData);
+          offset += batchSize;
+          hasMore = estoqueData.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
       
       // Separar itens por subgrupo
-      const itensGeralFormatados: ItemEstoque[] = (estoqueData || [])
+      const itensGeralFormatados: ItemEstoque[] = allEstoque
         .filter(item => item.subgrupo?.toUpperCase() !== 'HORTIFRUTI')
         .map(item => ({
           id: item.id,
@@ -181,7 +197,7 @@ const Ofertas = () => {
           fonte: 'estoque' as const
         }));
 
-      const itensHortifrutiFormatados: ItemEstoque[] = (estoqueData || [])
+      const itensHortifrutiFormatados: ItemEstoque[] = allEstoque
         .filter(item => item.subgrupo?.toUpperCase() === 'HORTIFRUTI')
         .map(item => ({
           id: item.id,
