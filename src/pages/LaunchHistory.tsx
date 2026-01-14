@@ -160,7 +160,8 @@ const LaunchHistory = () => {
   };
 
   const formatQuantity = (perda: Perda) => {
-    if (perda.estoque?.unidade === 'kg' && perda.peso_perdido) {
+    const isKg = perda.estoque?.unidade?.toLowerCase() === 'kg';
+    if (isKg && perda.peso_perdido) {
       return `${perda.peso_perdido} kg`;
     }
     if (perda.quantidade_perdida) {
