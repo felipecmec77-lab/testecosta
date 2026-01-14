@@ -2129,6 +2129,10 @@ export type Database = {
         | "quebrado"
         | "avaria"
         | "outros"
+        | "limpeza"
+        | "manutencao"
+        | "escritorio"
+        | "alimentacao"
       ordem_compra_status:
         | "rascunho"
         | "enviada"
@@ -2297,6 +2301,10 @@ export const Constants = {
         "quebrado",
         "avaria",
         "outros",
+        "limpeza",
+        "manutencao",
+        "escritorio",
+        "alimentacao",
       ],
       ordem_compra_status: [
         "rascunho",
