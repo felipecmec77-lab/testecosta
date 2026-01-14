@@ -180,7 +180,7 @@ const LaunchList = ({ launches, onRefresh }: LaunchListProps) => {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          {format(new Date(launch.data_lancamento), 'dd/MM/yyyy', { locale: ptBR })}
+                          {format(new Date(launch.criado_em), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </span>
                         <span className="flex items-center gap-1">
                           <User className="w-3 h-3" />
