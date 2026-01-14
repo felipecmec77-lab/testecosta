@@ -1534,6 +1534,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "perdas_produto_id_estoque_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "estoque"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "perdas_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
