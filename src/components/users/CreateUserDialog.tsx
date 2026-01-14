@@ -81,10 +81,12 @@ const CreateUserDialog = ({ onUserCreated }: CreateUserDialogProps) => {
 
       if (response.data?.error) {
         let errorMessage = response.data.error;
-        if (errorMessage.includes('already been registered') || errorMessage.includes('email_exists')) {
+        if (errorMessage.includes('already been registered') || 
+            errorMessage.includes('email_exists') ||
+            errorMessage.includes('already registered')) {
           errorMessage = authType === 'email' 
-            ? 'Este email já está cadastrado' 
-            : 'Este usuário já está cadastrado';
+            ? 'Este email já está cadastrado no sistema' 
+            : `O usuário "${formData.username}" já está cadastrado no sistema`;
         }
         throw new Error(errorMessage);
       }
@@ -103,10 +105,12 @@ const CreateUserDialog = ({ onUserCreated }: CreateUserDialogProps) => {
       onUserCreated();
     } catch (error: any) {
       let errorMessage = error.message || 'Erro desconhecido';
-      if (errorMessage.includes('already been registered') || errorMessage.includes('email_exists')) {
+      if (errorMessage.includes('already been registered') || 
+          errorMessage.includes('email_exists') ||
+          errorMessage.includes('already registered')) {
         errorMessage = authType === 'email' 
-          ? 'Este email já está cadastrado' 
-          : 'Este usuário já está cadastrado';
+          ? 'Este email já está cadastrado no sistema' 
+          : `O usuário "${formData.username}" já está cadastrado no sistema`;
       }
       toast({ 
         title: 'Erro ao criar usuário', 
