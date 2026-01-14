@@ -11,7 +11,7 @@ interface Message {
 }
 
 interface AnalysisContext {
-  type: 'losses' | 'stock' | 'purchases' | 'general';
+  type: 'losses' | 'stock' | 'purchases' | 'general' | 'ofertas';
   data?: any;
 }
 
@@ -75,6 +75,56 @@ Deno.serve(async (req) => {
       { role: 'user', content: message }
     ];
 
+    // Preparar body para API - com tool calling para ofertas
+    const body: any = {
+      model: 'google/gemini-2.5-flash',
+      messages,
+      max_completion_tokens: 2000,
+    };
+
+    // Tool calling para ofertas
+    if (contextType === 'ofertas') {
+      body.tools = [
+        {
+          type: "function",
+          function: {
+            name: "sugerir_itens_oferta",
+            description: "Sugere itens para uma oferta promocional com preços arredondados comercialmente (X,49 ou X,99)",
+            parameters: {
+              type: "object",
+              properties: {
+                itens: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      item_id: { type: "string", description: "ID do item no estoque" },
+                      nome: { type: "string", description: "Nome do produto" },
+                      preco_custo: { type: "number", description: "Preço de custo" },
+                      preco_venda_atual: { type: "number", description: "Preço de venda normal" },
+                      preco_oferta_sugerido: { type: "number", description: "Preço sugerido para oferta (arredondado para X,49 ou X,99)" },
+                      margem_sugerida: { type: "number", description: "Margem de lucro em %" },
+                      motivo: { type: "string", description: "Motivo da sugestão (ex: Boa margem, Estoque alto, Sazonal)" },
+                      destaque: { type: "boolean", description: "Se é um item âncora/destaque" }
+                    },
+                    required: ["item_id", "nome", "preco_custo", "preco_venda_atual", "preco_oferta_sugerido", "margem_sugerida", "motivo", "destaque"]
+                  }
+                },
+                estrategia: { type: "string", description: "Explicação da estratégia de oferta" },
+                alertas: { 
+                  type: "array", 
+                  items: { type: "string" },
+                  description: "Alertas sobre margens baixas ou riscos"
+                }
+              },
+              required: ["itens", "estrategia", "alertas"]
+            }
+          }
+        }
+      ];
+      body.tool_choice = "auto";
+    }
+
     // Chamar Lovable AI
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -82,22 +132,51 @@ Deno.serve(async (req) => {
         'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages,
-        max_completion_tokens: 2000,
-        temperature: 0.7,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
       console.error('AI API error:', errorText);
+      
+      if (aiResponse.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limits exceeded, please try again later." }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (aiResponse.status === 402) {
+        return new Response(JSON.stringify({ error: "Payment required, please add funds to your Lovable AI workspace." }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
       throw new Error(`AI API error: ${aiResponse.status}`);
     }
 
     const aiData = await aiResponse.json();
-    const assistantMessage = aiData.choices[0]?.message?.content || 'Desculpe, não consegui processar sua solicitação.';
+    
+    let assistantMessage = '';
+    let sugestao = null;
+
+    // Processar resposta - verificar se usou tool calling
+    const choice = aiData.choices[0];
+    
+    if (choice.message?.tool_calls && choice.message.tool_calls.length > 0) {
+      const toolCall = choice.message.tool_calls[0];
+      if (toolCall.function?.name === 'sugerir_itens_oferta') {
+        try {
+          sugestao = JSON.parse(toolCall.function.arguments);
+          assistantMessage = `✅ Encontrei ${sugestao.itens.length} itens ideais para sua oferta!\n\n📋 **Estratégia:** ${sugestao.estrategia}\n\nVeja os itens sugeridos no painel ao lado. Você pode selecionar os que deseja adicionar à oferta.`;
+        } catch (e) {
+          console.error('Error parsing tool call:', e);
+          assistantMessage = choice.message?.content || 'Desculpe, não consegui processar a sugestão.';
+        }
+      }
+    } else {
+      assistantMessage = choice.message?.content || 'Desculpe, não consegui processar sua solicitação.';
+    }
 
     // Salvar ou atualizar conversa
     const updatedMessages = [
@@ -130,14 +209,20 @@ Deno.serve(async (req) => {
       savedConversationId = newConversation?.id;
     }
 
-    return new Response(JSON.stringify({
+    const responsePayload: any = {
       response: assistantMessage,
       conversationId: savedConversationId,
       context: {
         type: contextType,
         dataLoaded: !!context.data
       }
-    }), {
+    };
+
+    if (sugestao) {
+      responsePayload.sugestao = sugestao;
+    }
+
+    return new Response(JSON.stringify(responsePayload), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
@@ -156,6 +241,73 @@ async function getAnalysisContext(supabase: any, contextType: string): Promise<A
 
   try {
     switch (contextType) {
+      case 'ofertas':
+        // Buscar estoque excluindo HORTIFRUTI e margens > 100%
+        const { data: estoqueData } = await supabase
+          .from('estoque')
+          .select('id, nome, codigo, preco_custo, preco_venda, estoque_atual, estoque_minimo, estoque_maximo, grupo, subgrupo, marca')
+          .eq('ativo', true)
+          .order('nome', { ascending: true });
+
+        // Filtrar: excluir hortifruti e margem > 100%
+        const produtosVarejo = (estoqueData || []).filter((p: any) => {
+          const subgrupo = (p.subgrupo || '').toUpperCase();
+          if (subgrupo === 'HORTIFRUTI') return false;
+          
+          const margem = p.preco_custo > 0 
+            ? ((p.preco_venda - p.preco_custo) / p.preco_custo) * 100 
+            : 0;
+          if (margem > 100) return false;
+          
+          return true;
+        });
+
+        // Identificar produtos com boas margens (15-50%)
+        const produtosBoaMargem = produtosVarejo.filter((p: any) => {
+          const margem = p.preco_custo > 0 
+            ? ((p.preco_venda - p.preco_custo) / p.preco_custo) * 100 
+            : 0;
+          return margem >= 15 && margem <= 50;
+        }).slice(0, 50);
+
+        // Produtos com estoque alto
+        const produtosEstoqueAlto = produtosVarejo.filter((p: any) => 
+          p.estoque_maximo && p.estoque_atual > p.estoque_maximo * 0.8
+        ).slice(0, 30);
+
+        // Buscar ofertas anteriores para referência
+        const { data: ofertasAnteriores } = await supabase
+          .from('ofertas')
+          .select('id, nome_campanha, tipo, setor')
+          .order('criado_em', { ascending: false })
+          .limit(10);
+
+        const { data: itensOfertasAnteriores } = await supabase
+          .from('itens_oferta')
+          .select('item_id, nome_item, preco_oferta, preco_custo')
+          .limit(50);
+
+        // Agrupar por categoria
+        const categorias: Record<string, number> = {};
+        produtosVarejo.forEach((p: any) => {
+          const grupo = p.grupo || 'Outros';
+          categorias[grupo] = (categorias[grupo] || 0) + 1;
+        });
+
+        context.data = {
+          totalProdutos: produtosVarejo.length,
+          produtosDisponiveis: produtosVarejo.slice(0, 100), // Limitar para não exceder contexto
+          produtosBoaMargem,
+          produtosEstoqueAlto,
+          ofertasAnteriores: ofertasAnteriores || [],
+          itensOfertasAnteriores: itensOfertasAnteriores || [],
+          categorias,
+          dataAtual: new Date().toISOString().split('T')[0],
+          diaSemana: new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(new Date()),
+          mes: new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(new Date())
+        };
+        break;
+
       case 'losses':
         // Buscar dados de perdas dos últimos 30 dias
         const thirtyDaysAgo = new Date();
@@ -190,7 +342,7 @@ async function getAnalysisContext(supabase: any, contextType: string): Promise<A
 
       case 'stock':
         // Buscar dados de estoque
-        const { data: estoqueData } = await supabase
+        const { data: stockData } = await supabase
           .from('estoque')
           .select('*')
           .eq('ativo', true)
@@ -202,15 +354,15 @@ async function getAnalysisContext(supabase: any, contextType: string): Promise<A
           .order('nome_produto', { ascending: true });
 
         // Identificar produtos críticos
-        const produtosCriticos = estoqueData?.filter((p: any) => 
+        const produtosCriticos = stockData?.filter((p: any) => 
           p.estoque_atual <= p.estoque_minimo
         ) || [];
 
         context.data = {
-          estoque: estoqueData || [],
+          estoque: stockData || [],
           produtos: produtosData || [],
           criticos: produtosCriticos,
-          totalItens: (estoqueData?.length || 0) + (produtosData?.length || 0)
+          totalItens: (stockData?.length || 0) + (produtosData?.length || 0)
         };
         break;
 
@@ -304,6 +456,57 @@ Diretrizes:
   let contextPrompt = '';
 
   switch (contextType) {
+    case 'ofertas':
+      contextPrompt = `
+CONTEXTO ATUAL - ASSISTENTE DE OFERTAS DE VAREJO:
+
+Você é um especialista em estratégias de ofertas de varejo. Seu trabalho é sugerir itens para ofertas promocionais.
+
+REGRAS DE PRECIFICAÇÃO INTELIGENTE:
+- Margem mínima recomendada: 5%
+- Margem ideal para ofertas: 10-25%
+- IMPORTANTE: Arredondamento comercial - preços DEVEM terminar em ,49 ou ,99
+- Produtos âncora: margens menores para atrair clientes (podem ter 8-12%)
+- Produtos de impulso: podem ter margens maiores (20-35%)
+
+REGRAS DE SELEÇÃO DE ITENS:
+- NUNCA sugira produtos do subgrupo HORTIFRUTI (esses são tratados separadamente)
+- NUNCA sugira produtos com margem calculada acima de 100% (provavelmente dados incorretos)
+- Priorize mix de categorias diferentes
+- Considere produtos com estoque alto
+- Use a função sugerir_itens_oferta para retornar sugestões estruturadas
+
+DADOS DISPONÍVEIS:
+${context.data ? `
+- Total de produtos disponíveis: ${context.data.totalProdutos}
+- Produtos com boa margem (15-50%): ${context.data.produtosBoaMargem?.length || 0}
+- Produtos com estoque alto: ${context.data.produtosEstoqueAlto?.length || 0}
+- Data atual: ${context.data.dataAtual} (${context.data.diaSemana})
+- Mês: ${context.data.mes}
+
+Categorias disponíveis:
+${JSON.stringify(context.data.categorias, null, 2)}
+
+Produtos com boa margem para oferta:
+${JSON.stringify(context.data.produtosBoaMargem?.slice(0, 20), null, 2)}
+
+Produtos com estoque alto (priorizar queima):
+${JSON.stringify(context.data.produtosEstoqueAlto?.slice(0, 15), null, 2)}
+
+Ofertas anteriores para referência:
+${JSON.stringify(context.data.ofertasAnteriores, null, 2)}
+` : 'Nenhum dado de estoque disponível no momento.'}
+
+Ao sugerir ofertas:
+1. Use a função sugerir_itens_oferta para retornar dados estruturados
+2. Misture categorias (não apenas uma categoria)
+3. Inclua 1-2 produtos âncora com margem menor
+4. Sugira preços já arredondados (X,49 ou X,99)
+5. Explique a estratégia
+6. Alerte sobre riscos (margens muito baixas, etc)
+`;
+      break;
+
     case 'losses':
       contextPrompt = `
 CONTEXTO ATUAL - ANÁLISE DE PERDAS:

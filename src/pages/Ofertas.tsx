@@ -40,6 +40,7 @@ import OfertasPDF from '@/components/ofertas/OfertasPDF';
 import { Leaf, Scale } from 'lucide-react';
 import OfertasHortifrutiPDF from '@/components/ofertas/OfertasHortifrutiPDF';
 import { HortifrutiTab } from '@/components/ofertas/HortifrutiTab';
+import { OfertaAiAssistant } from '@/components/ofertas/OfertaAiAssistant';
 
 interface ItemEstoque {
   id: string;
@@ -103,7 +104,8 @@ const STATUS_OFERTA = [
 const Ofertas = () => {
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
-  const [activeTab, setActiveTab] = useState('nova');
+  const [activeTab, setActiveTab] = useState('varejo');
+  const [showAiAssistant, setShowAiAssistant] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Estoque items
@@ -657,17 +659,17 @@ const Ofertas = () => {
         </button>
 
         {/* Botões de navegação em grid - estilo moderno */}
-        <div className="grid grid-cols-5 gap-2 md:gap-3">
+        <div className="grid grid-cols-4 gap-2 md:gap-3">
           <button
-            onClick={() => setActiveTab('nova')}
+            onClick={() => setActiveTab('varejo')}
             className={`flex flex-col items-center justify-center p-3 md:p-4 rounded-xl transition-all duration-300 ${
-              activeTab === 'nova'
+              activeTab === 'varejo'
                 ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg scale-[1.02]'
                 : 'bg-card border border-border hover:bg-muted/50 text-foreground hover:scale-[1.01]'
             }`}
           >
-            <Plus className="w-6 h-6 mb-1" />
-            <span className="text-xs md:text-sm font-medium">{editingOfertaId ? 'EDITANDO' : 'NOVA'}</span>
+            <Sparkles className="w-6 h-6 mb-1" />
+            <span className="text-xs md:text-sm font-medium">VAREJO</span>
           </button>
           <button
             onClick={() => setActiveTab('hortifruti')}
@@ -681,21 +683,10 @@ const Ofertas = () => {
             <span className="text-xs md:text-sm font-medium">HORTI</span>
           </button>
           <button
-            onClick={() => setActiveTab('historico')}
-            className={`flex flex-col items-center justify-center p-3 md:p-4 rounded-xl transition-all duration-300 ${
-              activeTab === 'historico'
-                ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-[1.02]'
-                : 'bg-card border border-border hover:bg-muted/50 text-foreground hover:scale-[1.01]'
-            }`}
-          >
-            <TrendingUp className="w-6 h-6 mb-1" />
-            <span className="text-xs md:text-sm font-medium">HISTÓRICO</span>
-          </button>
-          <button
             onClick={() => setActiveTab('salvas')}
             className={`flex flex-col items-center justify-center p-3 md:p-4 rounded-xl transition-all duration-300 ${
               activeTab === 'salvas'
-                ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg scale-[1.02]'
+                ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg scale-[1.02]'
                 : 'bg-card border border-border hover:bg-muted/50 text-foreground hover:scale-[1.01]'
             }`}
           >
@@ -703,23 +694,23 @@ const Ofertas = () => {
             <span className="text-xs md:text-sm font-medium">SALVAS</span>
           </button>
           <button
-            onClick={() => setActiveTab('biblioteca')}
+            onClick={() => setActiveTab('historico')}
             className={`flex flex-col items-center justify-center p-3 md:p-4 rounded-xl transition-all duration-300 ${
-              activeTab === 'biblioteca'
-                ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg scale-[1.02]'
+              activeTab === 'historico'
+                ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg scale-[1.02]'
                 : 'bg-card border border-border hover:bg-muted/50 text-foreground hover:scale-[1.01]'
             }`}
           >
-            <Package className="w-6 h-6 mb-1" />
-            <span className="text-xs md:text-sm font-medium">BIBLIO</span>
+            <TrendingUp className="w-6 h-6 mb-1" />
+            <span className="text-xs md:text-sm font-medium">HISTÓRICO</span>
           </button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="hidden"></TabsList>
 
-          {/* Nova Oferta */}
-          <TabsContent value="nova" className="space-y-4 mt-4">
+          {/* Aba Varejo - Nova oferta com assistente IA */}
+          <TabsContent value="varejo" className="space-y-4 mt-4">
             {editingOfertaId && (
               <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 flex items-center justify-between">
                 <span className="text-warning font-medium">Editando oferta existente</span>
@@ -728,6 +719,29 @@ const Ofertas = () => {
                 </Button>
               </div>
             )}
+
+            {/* Ações Rápidas com IA */}
+            <Card className="bg-gradient-to-r from-primary/5 to-purple-500/5 border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    <span className="font-bold">Ações Rápidas</span>
+                  </div>
+                  <Button 
+                    onClick={() => setShowAiAssistant(true)}
+                    className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Sugerir com IA
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Use a IA para sugerir itens automaticamente baseado em estoque, margens e sazonalidade.
+                  Produtos do hortifruti e com margem acima de 100% são excluídos automaticamente.
+                </p>
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>
@@ -1021,79 +1035,9 @@ const Ofertas = () => {
               onImportarItens={(itens) => {
                 setNovaOferta(prev => ({ ...prev, setor: 'hortifruti' }));
                 setItensOferta(prev => [...prev, ...itens]);
-                setActiveTab('nova');
+                setActiveTab('varejo');
               }}
             />
-          </TabsContent>
-
-          {/* Biblioteca de Itens */}
-          <TabsContent value="biblioteca" className="space-y-4 mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center justify-between">
-                  <span>Itens Disponíveis para Ofertas</span>
-                  <Badge variant="secondary">{itensEstoque.length} itens</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      placeholder="Buscar por nome, código ou marca..."
-                      value={searchEstoque}
-                      onChange={(e) => setSearchEstoque(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Produto</TableHead>
-                        <TableHead>Código</TableHead>
-                        <TableHead>Marca</TableHead>
-                        <TableHead className="text-right">Custo</TableHead>
-                        <TableHead className="text-right">Venda</TableHead>
-                        <TableHead className="text-right">Margem</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredEstoque.slice(0, 50).map(item => {
-                        const margem = calcularMargem(item.preco_custo, item.preco_venda);
-                        return (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium">{item.nome_item}</TableCell>
-                            <TableCell className="text-muted-foreground text-xs">
-                              {item.codigo_barras || '-'}
-                            </TableCell>
-                            <TableCell>{item.marca || '-'}</TableCell>
-                            <TableCell className="text-right">
-                              R$ {item.preco_custo.toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              R$ {item.preco_venda.toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs shadow ${getMargemStyle(margem)}`}>
-                                {margem.toFixed(1)}%
-                              </span>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-                {filteredEstoque.length > 50 && (
-                  <p className="text-sm text-muted-foreground text-center mt-4">
-                    Mostrando 50 de {filteredEstoque.length} itens. Use a busca para filtrar.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Histórico de Ofertas */}
@@ -1116,6 +1060,15 @@ const Ofertas = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Assistente de IA para Ofertas */}
+      <OfertaAiAssistant 
+        open={showAiAssistant}
+        onOpenChange={setShowAiAssistant}
+        onAddItems={(itens) => {
+          setItensOferta(prev => [...prev, ...itens]);
+        }}
+      />
 
       {/* Dialog Adicionar Múltiplos Itens */}
       <Dialog open={showAddItemDialog} onOpenChange={setShowAddItemDialog}>
