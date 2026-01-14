@@ -96,7 +96,7 @@ const Hortifruti = () => {
           launchesData.map(async (launch) => {
             const { data: perdasData } = await supabase
               .from('perdas')
-              .select('valor_perda')
+              .select('valor_perda, peso_perdido, quantidade_perdida')
               .eq('lancamento_id', launch.id);
 
             const { data: profileData } = await supabase
@@ -105,11 +105,16 @@ const Hortifruti = () => {
               .eq('id', launch.usuario_id)
               .single();
 
+            const totalPeso = perdasData?.reduce((acc, p) => acc + (p.peso_perdido || 0), 0) || 0;
+            const totalQtd = perdasData?.reduce((acc, p) => acc + (p.quantidade_perdida || 0), 0) || 0;
+
             return {
               ...launch,
               profiles: profileData || undefined,
               items_count: perdasData?.length || 0,
               total_value: perdasData?.reduce((acc, p) => acc + (p.valor_perda || 0), 0) || 0,
+              total_peso: totalPeso,
+              total_quantidade: totalQtd,
             } as Launch;
           })
         );
