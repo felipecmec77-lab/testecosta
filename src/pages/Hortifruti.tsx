@@ -3,37 +3,22 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
-  Package, 
   TrendingDown, 
   ClipboardList, 
   FileText,
   Loader2,
   Apple,
-  Search,
-  Plus,
-  Trash2,
-  Pencil,
   BarChart3
 } from 'lucide-react';
 import LossCart from '@/components/losses/LossCart';
 import LaunchList, { Launch } from '@/components/losses/LaunchList';
 import HortifrutiDashboard from '@/components/hortifruti/HortifrutiDashboard';
-import type { Database } from '@/integrations/supabase/types';
-
-type CategoriaType = Database['public']['Enums']['categoria_produto'];
-type UnidadeType = Database['public']['Enums']['unidade_medida'];
 
 interface Product {
   id: string;
@@ -41,15 +26,6 @@ interface Product {
   quantidade_estoque: number;
   unidade_medida: string;
   preco_unitario: number;
-  preco_venda: number | null;
-}
-
-interface EstoqueProduct {
-  id: string;
-  nome: string;
-  estoque_atual: number;
-  unidade: string;
-  preco_custo: number;
   preco_venda: number | null;
 }
 
@@ -64,7 +40,6 @@ const Hortifruti = () => {
   const [launches, setLaunches] = useState<Launch[]>([]);
   const [loading, setLoading] = useState(true);
   const { userRole, loading: authLoading } = useAuth();
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchData();
@@ -166,7 +141,7 @@ const Hortifruti = () => {
 
         {/* Navigation Tabs - estilo moderno com gradientes */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto gap-2 bg-transparent p-0">
+          <TabsList className={`grid w-full h-auto gap-2 bg-transparent p-0 ${isAdmin ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1'}`}>
             <TabsTrigger 
               value="perdas"
               className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-white transition-all duration-200 bg-gradient-to-br from-red-500 to-red-600 data-[state=active]:ring-2 data-[state=active]:ring-white/40 data-[state=active]:shadow-lg data-[state=active]:scale-[1.02] data-[state=inactive]:opacity-80 hover:opacity-100"
@@ -183,14 +158,6 @@ const Hortifruti = () => {
                 >
                   <BarChart3 className="w-5 h-5" />
                   <span className="text-sm">DASHBOARD</span>
-                </TabsTrigger>
-
-                <TabsTrigger 
-                  value="produtos"
-                  className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold text-white transition-all duration-200 bg-gradient-to-br from-blue-500 to-blue-600 data-[state=active]:ring-2 data-[state=active]:ring-white/40 data-[state=active]:shadow-lg data-[state=active]:scale-[1.02] data-[state=inactive]:opacity-80 hover:opacity-100"
-                >
-                  <Package className="w-5 h-5" />
-                  <span className="text-sm">PRODUTOS</span>
                 </TabsTrigger>
                 
                 <TabsTrigger 
@@ -223,10 +190,6 @@ const Hortifruti = () => {
                 <TabsContent value="dashboard" className="mt-0 space-y-0">
                   <HortifrutiDashboard />
                 </TabsContent>
-
-                <TabsContent value="produtos" className="mt-0 space-y-0">
-                  <ProductsSection products={products} onRefresh={fetchData} />
-                </TabsContent>
                 
                 <TabsContent value="lancamentos" className="mt-0 space-y-0">
                   <LaunchList launches={launches} onRefresh={fetchData} />
@@ -241,305 +204,6 @@ const Hortifruti = () => {
         </Tabs>
       </div>
     </MainLayout>
-  );
-};
-
-// Products Section Component
-const ProductsSection = ({ products, onRefresh }: { products: Product[]; onRefresh: () => void }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [editPrecoCusto, setEditPrecoCusto] = useState('');
-  const [newProduct, setNewProduct] = useState({
-    nome_produto: '',
-    categoria: 'fruta' as CategoriaType,
-    unidade_medida: 'kg' as UnidadeType,
-    quantidade_estoque: '',
-    estoque_minimo: '',
-    preco_unitario: '',
-  });
-  const { toast } = useToast();
-
-
-  const handleAddProduct = async () => {
-    if (!newProduct.nome_produto) {
-      toast({ title: 'Informe o nome do produto', variant: 'destructive' });
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const { error } = await supabase.from('produtos').insert([{
-        nome_produto: newProduct.nome_produto,
-        categoria: newProduct.categoria,
-        unidade_medida: newProduct.unidade_medida,
-        quantidade_estoque: Number(newProduct.quantidade_estoque) || 0,
-        estoque_minimo: Number(newProduct.estoque_minimo) || 0,
-        preco_unitario: Number(newProduct.preco_unitario) || 0,
-      }]);
-      
-      if (error) throw error;
-      
-      toast({ title: 'Produto adicionado!' });
-      setDialogOpen(false);
-      setNewProduct({
-        nome_produto: '',
-        categoria: 'fruta',
-        unidade_medida: 'kg',
-        quantidade_estoque: '',
-        estoque_minimo: '',
-        preco_unitario: '',
-      });
-      onRefresh();
-    } catch (error: any) {
-      toast({ title: 'Erro ao adicionar', description: error.message, variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteProduct = async (id: string) => {
-    try {
-      const { error } = await supabase.from('produtos').delete().eq('id', id);
-      if (error) throw error;
-      toast({ title: 'Produto removido!' });
-      onRefresh();
-    } catch (error: any) {
-      toast({ title: 'Erro ao remover', description: error.message, variant: 'destructive' });
-    }
-  };
-
-  const handleEditPrices = (product: Product) => {
-    setEditingProduct(product);
-    setEditPrecoCusto(product.preco_unitario.toString());
-    setEditDialogOpen(true);
-  };
-
-  const handleSavePrices = async () => {
-    if (!editingProduct) return;
-    
-    const newPrecoCusto = parseFloat(editPrecoCusto);
-    
-    if (isNaN(newPrecoCusto) || newPrecoCusto < 0) {
-      toast({ title: 'Informe um preço de custo válido', variant: 'destructive' });
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('produtos')
-        .update({ 
-          preco_unitario: newPrecoCusto
-        })
-        .eq('id', editingProduct.id);
-      
-      if (error) throw error;
-      
-      toast({ title: 'Preço atualizado!' });
-      setEditDialogOpen(false);
-      setEditingProduct(null);
-      onRefresh();
-    } catch (error: any) {
-      toast({ title: 'Erro ao atualizar preço', description: error.message, variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const filteredProducts = products.filter(p => 
-    p.nome_produto.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  return (
-    <>
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-4">
-        <CardTitle>Produtos do Hortifrúti</CardTitle>
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar produto..." 
-              className="pl-10 w-48"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-
-          
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="w-4 h-4 mr-2" />Adicionar</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Adicionar Produto</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Nome do Produto</Label>
-                  <Input 
-                    value={newProduct.nome_produto} 
-                    onChange={(e) => setNewProduct({...newProduct, nome_produto: e.target.value})} 
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Categoria</Label>
-                    <Select 
-                      value={newProduct.categoria} 
-                      onValueChange={(v: CategoriaType) => setNewProduct({...newProduct, categoria: v})}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fruta">Fruta</SelectItem>
-                        <SelectItem value="verdura">Verdura</SelectItem>
-                        <SelectItem value="legume">Legume</SelectItem>
-                        <SelectItem value="outros">Outros</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Unidade</Label>
-                    <Select 
-                      value={newProduct.unidade_medida} 
-                      onValueChange={(v: UnidadeType) => setNewProduct({...newProduct, unidade_medida: v})}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="kg">Kg</SelectItem>
-                        <SelectItem value="unidade">Unidade</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label>Estoque</Label>
-                    <Input 
-                      type="number" 
-                      value={newProduct.quantidade_estoque} 
-                      onChange={(e) => setNewProduct({...newProduct, quantidade_estoque: e.target.value})}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label>Mínimo</Label>
-                    <Input 
-                      type="number" 
-                      value={newProduct.estoque_minimo} 
-                      onChange={(e) => setNewProduct({...newProduct, estoque_minimo: e.target.value})}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <Label>Preço Custo (R$)</Label>
-                    <Input 
-                      type="number" 
-                      step="0.01"
-                      value={newProduct.preco_unitario} 
-                      onChange={(e) => setNewProduct({...newProduct, preco_unitario: e.target.value})}
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-                <Button onClick={handleAddProduct} disabled={saving} className="w-full">
-                  {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Adicionar
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Produto</TableHead>
-              <TableHead className="text-right">Preço Custo</TableHead>
-              <TableHead className="w-[120px]">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredProducts.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
-                  Nenhum produto encontrado
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredProducts.map(produto => (
-                <TableRow key={produto.id} className={produto.quantidade_estoque <= 0 ? 'bg-destructive/5' : ''}>
-                  <TableCell className="font-medium">{produto.nome_produto}</TableCell>
-                  <TableCell className="text-right">
-                    R$ {formatarPreco(produto.preco_unitario)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-primary/10"
-                        onClick={() => handleEditPrices(produto)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => handleDeleteProduct(produto.id)}
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-
-    {/* Edit Price Dialog */}
-    <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Editar Preço de Custo</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label className="text-muted-foreground">Produto</Label>
-            <p className="font-medium text-lg">{editingProduct?.nome_produto}</p>
-          </div>
-          <div>
-            <Label>Preço de Custo (R$)</Label>
-            <Input 
-              type="number" 
-              step="0.01"
-              value={editPrecoCusto}
-              onChange={(e) => setEditPrecoCusto(e.target.value)}
-              placeholder="0.00"
-              autoFocus
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            ⚠️ Esta alteração não afeta os valores já contabilizados em lançamentos anteriores.
-          </p>
-          <Button onClick={handleSavePrices} disabled={saving} className="w-full">
-            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Salvar
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  </>
   );
 };
 
@@ -558,7 +222,7 @@ const ReportsSection = () => {
         .from('perdas')
         .select(`
           *,
-          produtos(nome_produto, categoria, unidade_medida),
+          estoque(nome, unidade),
           lancamentos(numero)
         `)
         .order('data_perda', { ascending: false })
@@ -641,12 +305,12 @@ const ReportsSection = () => {
                   <TableCell>
                     {format(new Date(perda.data_perda + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
                   </TableCell>
-                  <TableCell className="font-medium">{perda.produtos?.nome_produto}</TableCell>
+                  <TableCell className="font-medium">{perda.estoque?.nome || 'Produto não encontrado'}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="capitalize">{perda.motivo_perda}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {perda.quantidade_perdida || perda.peso_perdido || 0} {perda.produtos?.unidade_medida}
+                    {perda.quantidade_perdida || perda.peso_perdido || 0} {perda.estoque?.unidade || 'UN'}
                   </TableCell>
                   <TableCell className="text-right text-destructive font-medium">
                     R$ {formatarPreco(perda.valor_perda || 0)}
