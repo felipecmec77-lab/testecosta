@@ -160,7 +160,6 @@ export function ImportarHortifruti({ onVoltar, onConfirmar }: ImportarHortifruti
     });
 
     onConfirmar(itens);
-    toast.success(`${itens.length} produto(s) importado(s)!`);
   };
 
   if (loading) {

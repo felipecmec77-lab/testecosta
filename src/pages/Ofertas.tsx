@@ -329,7 +329,6 @@ const Ofertas = () => {
     setSelectedMultipleItems([]);
     setMultipleItemsPreco({});
     setMultipleItemsCusto({});
-    toast.success(`${novosItens.length} item(ns) adicionado(s) à oferta!`);
   };
 
   const removeItemFromOferta = (index: number) => {
@@ -392,10 +391,9 @@ const Ofertas = () => {
           .delete()
           .eq('oferta_id', editingOfertaId);
 
-        // Inserir novos itens
+        // Inserir novos itens - não enviar item_id pois referencia tabela diferente
         const itensParaInserir = itensOferta.map(item => ({
           oferta_id: editingOfertaId,
-          item_id: item.item_id,
           nome_item: item.nome_item,
           preco_custo: item.preco_custo,
           preco_venda_normal: item.preco_venda_normal,
@@ -432,10 +430,9 @@ const Ofertas = () => {
 
         if (ofertaError) throw ofertaError;
 
-        // Criar itens da oferta
+        // Criar itens da oferta - não enviar item_id pois referencia tabela diferente
         const itensParaInserir = itensOferta.map(item => ({
           oferta_id: ofertaData.id,
-          item_id: item.item_id,
           nome_item: item.nome_item,
           preco_custo: item.preco_custo,
           preco_venda_normal: item.preco_venda_normal,
