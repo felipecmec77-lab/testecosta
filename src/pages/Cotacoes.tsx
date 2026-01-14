@@ -31,7 +31,6 @@ import {
 import CotacaoHeader from '@/components/cotacoes/CotacaoHeader';
 import CotacaoNavigation from '@/components/cotacoes/CotacaoNavigation';
 import NovaCotacao from '@/components/cotacoes/NovaCotacao';
-import ProdutosCotacao from '@/components/cotacoes/ProdutosCotacao';
 import HistoricoCotacoes from '@/components/cotacoes/HistoricoCotacoes';
 import MapaPrecos from '@/components/cotacoes/MapaPrecos';
 import OrdensCompra from '@/components/cotacoes/OrdensCompra';
@@ -58,7 +57,7 @@ interface Cotacao {
   total: number | null;
 }
 
-type TabValue = 'dashboard' | 'nova' | 'fornecedores' | 'produtos' | 'historico' | 'mapa' | 'ordens';
+type TabValue = 'dashboard' | 'nova' | 'fornecedores' | 'historico' | 'mapa' | 'ordens';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--info))', 'hsl(var(--warning))'];
 
@@ -337,7 +336,6 @@ const Cotacoes = () => {
             <NovaCotacao 
               userId={user!.id}
               onCotacaoCreated={handleCotacaoCreated}
-              onNavigateToProducts={() => setActiveTab('produtos')}
             />
           )}
 
@@ -408,11 +406,6 @@ const Cotacoes = () => {
                 </CardContent>
               </Card>
             </div>
-          )}
-
-          {/* Produtos Tab */}
-          {activeTab === 'produtos' && (
-            <ProdutosCotacao />
           )}
 
           {/* Histórico/Cotações Tab */}

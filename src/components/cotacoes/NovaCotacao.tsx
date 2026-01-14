@@ -19,10 +19,9 @@ import {
 interface NovaCotacaoProps {
   userId: string;
   onCotacaoCreated: () => void;
-  onNavigateToProducts?: () => void;
 }
 
-const NovaCotacao = ({ userId, onCotacaoCreated, onNavigateToProducts }: NovaCotacaoProps) => {
+const NovaCotacao = ({ userId, onCotacaoCreated }: NovaCotacaoProps) => {
   const [iniciado, setIniciado] = useState(false);
   const [saving, setSaving] = useState(false);
   
@@ -102,17 +101,6 @@ const NovaCotacao = ({ userId, onCotacaoCreated, onNavigateToProducts }: NovaCot
             <PlayCircle className="w-6 h-6 mr-2" />
             INICIAR NOVA COTAÇÃO
           </Button>
-          {onNavigateToProducts && (
-            <Button 
-              size="lg" 
-              variant="outline"
-              onClick={onNavigateToProducts}
-              className="text-lg px-8 py-6 h-auto"
-            >
-              <Package className="w-6 h-6 mr-2" />
-              GERENCIAR PRODUTOS
-            </Button>
-          )}
         </div>
       </div>
     );
@@ -251,16 +239,6 @@ const NovaCotacao = ({ userId, onCotacaoCreated, onNavigateToProducts }: NovaCot
             </Button>
           </div>
 
-          {onNavigateToProducts && (
-            <Button 
-              variant="secondary" 
-              onClick={onNavigateToProducts}
-              className="w-full"
-            >
-              <Package className="w-4 h-4 mr-2" />
-              IR PARA PRODUTOS DA COTAÇÃO
-            </Button>
-          )}
         </CardContent>
       </Card>
     </div>

@@ -17,23 +17,29 @@ import {
   Filter,
   Package,
   Minus,
-  Trash2
+  Trash2,
+  Settings2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { searchAcrossFields } from '@/lib/searchUtils';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
-interface ProdutoCotacao {
+interface ProdutoEstoque {
   id: string;
   codigo_barras: string | null;
   nome: string;
   marca: string | null;
-  categoria: string | null;
-  imagem_url: string | null;
-  unidade_medida: string | null;
+  grupo: string | null;
+  subgrupo: string | null;
+  unidade: string | null;
 }
 
 interface ItemCarrinho {
-  produto: ProdutoCotacao;
+  produto: ProdutoEstoque;
   quantidade: number;
 }
 
@@ -52,20 +58,22 @@ const SelecionarProdutosModal = ({
   cotacaoTitulo,
   onProdutosAdicionados 
 }: SelecionarProdutosModalProps) => {
-  const [produtos, setProdutos] = useState<ProdutoCotacao[]>([]);
+  const [produtos, setProdutos] = useState<ProdutoEstoque[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategoria, setSelectedCategoria] = useState<string | null>(null);
+  const [selectedGrupo, setSelectedGrupo] = useState<string | null>(null);
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
   const [showCarrinho, setShowCarrinho] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [subgruposOcultos, setSubgruposOcultos] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) {
       fetchProdutos();
+      loadSubgruposOcultos();
       setCarrinho([]);
       setSearchTerm('');
-      setSelectedCategoria(null);
+      setSelectedGrupo(null);
     }
   }, [open]);
 
@@ -73,8 +81,9 @@ const SelecionarProdutosModal = ({
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('produtos_cotacao')
-        .select('id, codigo_barras, nome, marca, categoria, imagem_url, unidade_medida')
+        .from('estoque')
+        .select('id, codigo_barras, nome, marca, grupo, subgrupo, unidade')
+        .eq('ativo', true)
         .order('nome');
 
       if (error) throw error;
@@ -87,25 +96,71 @@ const SelecionarProdutosModal = ({
     }
   };
 
-  // Categorias únicas
-  const categorias = useMemo(() => {
-    const cats = produtos
-      .map(p => p.categoria)
-      .filter((c): c is string => !!c);
-    return [...new Set(cats)].sort();
+  const loadSubgruposOcultos = async () => {
+    try {
+      const { data } = await supabase
+        .from('configuracoes_sistema')
+        .select('valor')
+        .eq('chave', 'cotacoes_subgrupos_ocultos')
+        .single();
+      
+      if (data?.valor && Array.isArray(data.valor)) {
+        setSubgruposOcultos(data.valor as string[]);
+      }
+    } catch (error) {
+      // Configuração não existe ainda
+    }
+  };
+
+  const saveSubgruposOcultos = async (ocultos: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('configuracoes_sistema')
+        .upsert({
+          chave: 'cotacoes_subgrupos_ocultos',
+          valor: ocultos
+        }, { onConflict: 'chave' });
+      
+      if (error) throw error;
+      setSubgruposOcultos(ocultos);
+      toast.success('Configuração salva!');
+    } catch (error) {
+      console.error('Erro ao salvar configuração:', error);
+      toast.error('Erro ao salvar configuração');
+    }
+  };
+
+  // Grupos únicos
+  const grupos = useMemo(() => {
+    const grps = produtos
+      .map(p => p.grupo)
+      .filter((g): g is string => !!g);
+    return [...new Set(grps)].sort();
+  }, [produtos]);
+
+  // Subgrupos únicos
+  const subgrupos = useMemo(() => {
+    const subs = produtos
+      .map(p => p.subgrupo)
+      .filter((s): s is string => !!s);
+    return [...new Set(subs)].sort();
   }, [produtos]);
 
   // Produtos filtrados
   const produtosFiltrados = useMemo(() => {
     return produtos.filter(p => {
-      const matchSearch = searchAcrossFields([p.nome, p.codigo_barras, p.marca, p.categoria], searchTerm);
-      const matchCategoria = !selectedCategoria || p.categoria === selectedCategoria;
-      return matchSearch && matchCategoria;
+      // Filtrar subgrupos ocultos
+      if (p.subgrupo && subgruposOcultos.includes(p.subgrupo)) {
+        return false;
+      }
+      const matchSearch = searchAcrossFields([p.nome, p.codigo_barras, p.marca, p.grupo], searchTerm);
+      const matchGrupo = !selectedGrupo || p.grupo === selectedGrupo;
+      return matchSearch && matchGrupo;
     });
-  }, [produtos, searchTerm, selectedCategoria]);
+  }, [produtos, searchTerm, selectedGrupo, subgruposOcultos]);
 
   // Funções do carrinho
-  const addToCarrinho = (produto: ProdutoCotacao) => {
+  const addToCarrinho = (produto: ProdutoEstoque) => {
     setCarrinho(prev => {
       const existing = prev.find(item => item.produto.id === produto.id);
       if (existing) {
@@ -219,33 +274,80 @@ const SelecionarProdutosModal = ({
               <Barcode className="w-4 h-4" />
             </Button>
             <Button 
-              variant={selectedCategoria ? 'default' : 'outline'} 
+              variant={selectedGrupo ? 'default' : 'outline'} 
               size="icon" 
               className="shrink-0"
-              onClick={() => setSelectedCategoria(null)}
+              onClick={() => setSelectedGrupo(null)}
             >
               <Filter className="w-4 h-4" />
             </Button>
+            
+            {/* Configuração de subgrupos ocultos */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="icon" className="shrink-0">
+                  <Settings2 className="w-4 h-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-sm mb-2">Ocultar Subgrupos</h4>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Selecione os subgrupos que não devem aparecer nas cotações
+                    </p>
+                  </div>
+                  <ScrollArea className="h-48">
+                    <div className="space-y-2">
+                      {subgrupos.map(subgrupo => (
+                        <div key={subgrupo} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`sub-${subgrupo}`}
+                            checked={subgruposOcultos.includes(subgrupo)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                saveSubgruposOcultos([...subgruposOcultos, subgrupo]);
+                              } else {
+                                saveSubgruposOcultos(subgruposOcultos.filter(s => s !== subgrupo));
+                              }
+                            }}
+                          />
+                          <label 
+                            htmlFor={`sub-${subgrupo}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {subgrupo}
+                          </label>
+                        </div>
+                      ))}
+                      {subgrupos.length === 0 && (
+                        <p className="text-sm text-muted-foreground">Nenhum subgrupo encontrado</p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
-          {/* Categorias */}
-          {categorias.length > 0 && (
+          {/* Grupos */}
+          {grupos.length > 0 && (
             <div className="flex gap-2 flex-wrap">
               <Badge 
-                variant={selectedCategoria === null ? 'default' : 'outline'}
+                variant={selectedGrupo === null ? 'default' : 'outline'}
                 className="cursor-pointer"
-                onClick={() => setSelectedCategoria(null)}
+                onClick={() => setSelectedGrupo(null)}
               >
-                Todas
+                Todos
               </Badge>
-              {categorias.map(cat => (
+              {grupos.map(grp => (
                 <Badge 
-                  key={cat}
-                  variant={selectedCategoria === cat ? 'default' : 'outline'}
+                  key={grp}
+                  variant={selectedGrupo === grp ? 'default' : 'outline'}
                   className="cursor-pointer"
-                  onClick={() => setSelectedCategoria(cat)}
+                  onClick={() => setSelectedGrupo(grp)}
                 >
-                  {cat}
+                  {grp}
                 </Badge>
               ))}
             </div>
@@ -300,15 +402,7 @@ const SelecionarProdutosModal = ({
                         }}
                       />
                       <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center shrink-0">
-                        {produto.imagem_url ? (
-                          <img 
-                            src={produto.imagem_url} 
-                            alt="" 
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <Package className="w-6 h-6 text-muted-foreground" />
-                        )}
+                        <Package className="w-6 h-6 text-muted-foreground" />
                       </div>
                     </div>
 
@@ -350,7 +444,7 @@ const SelecionarProdutosModal = ({
                         </div>
                       ) : (
                         <span className="text-sm text-muted-foreground">
-                          1 {produto.unidade_medida || 'Unidade'}
+                          1 {produto.unidade || 'UN'}
                         </span>
                       )}
                     </div>
@@ -360,11 +454,11 @@ const SelecionarProdutosModal = ({
                       {produto.marca || '-'}
                     </div>
 
-                    {/* Categoria */}
+                    {/* Grupo */}
                     <div className="text-center">
-                      {produto.categoria && (
+                      {produto.grupo && (
                         <Badge variant="secondary" className="text-xs">
-                          {produto.categoria}
+                          {produto.grupo}
                         </Badge>
                       )}
                     </div>
@@ -424,11 +518,7 @@ const SelecionarProdutosModal = ({
                   <div key={item.produto.id} className="flex items-center justify-between py-2 border-b last:border-0">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
-                        {item.produto.imagem_url ? (
-                          <img src={item.produto.imagem_url} alt="" className="w-full h-full object-cover rounded" />
-                        ) : (
-                          <Package className="w-4 h-4 text-muted-foreground" />
-                        )}
+                        <Package className="w-4 h-4 text-muted-foreground" />
                       </div>
                       <div>
                         <p className="text-sm font-medium">{item.produto.nome}</p>
