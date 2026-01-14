@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Cherry, Check, Send, Printer, RotateCcw, Plus, Pencil, PackageX, Trash2, Image, Share2 } from 'lucide-react';
+import { Loader2, Cherry, Check, Send, Printer, RotateCcw, Plus, Pencil, PackageX, Trash2, Image, Share2, Copy } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import ThermalReceipt from '@/components/ThermalReceipt';
 import html2canvas from 'html2canvas';
@@ -365,6 +367,65 @@ const ConferenciaPolpas = () => {
     }
   };
 
+  // Generate text for copying (like Coca-Cola)
+  const generateTextReport = (): string => {
+    const dataFormatada = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    
+    let text = `🍓 *CONFERÊNCIA DE POLPAS*\n`;
+    text += `Nº ${String(receiptNumber).padStart(6, '0')}\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `📅 Data: ${dataFormatada}\n`;
+    if (userName) text += `👤 Operador: ${userName}\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+    
+    const itensComEstoque = receiptItems.filter(item => !item.semEstoque);
+    const itensSemEstoque = receiptItems.filter(item => item.semEstoque);
+    
+    if (itensComEstoque.length > 0) {
+      text += `✅ *EM ESTOQUE:*\n`;
+      itensComEstoque.forEach(item => {
+        text += `• ${item.nome.toUpperCase()} - ${item.quantidade} un\n`;
+      });
+      text += `\n`;
+    }
+    
+    if (itensSemEstoque.length > 0) {
+      text += `❌ *SEM ESTOQUE:*\n`;
+      itensSemEstoque.forEach(item => {
+        text += `• ${item.nome.toUpperCase()}\n`;
+      });
+      text += `\n`;
+    }
+    
+    text += `━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `📊 *TOTAL: ${receiptItems.length} itens*\n`;
+    text += `✅ Em estoque: ${itensComEstoque.length}\n`;
+    text += `❌ Sem estoque: ${itensSemEstoque.length}\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `\n_COMERCIAL COSTA_\n`;
+    text += `_Preço baixo do jeito que você gosta!_`;
+    
+    return text;
+  };
+
+  const handleCopyText = async () => {
+    const text = generateTextReport();
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ 
+        title: 'Texto copiado!', 
+        description: 'Cole no WhatsApp ou onde preferir' 
+      });
+    } catch (error) {
+      console.error('Error copying:', error);
+      toast({ 
+        title: 'Erro ao copiar', 
+        description: 'Tente selecionar e copiar manualmente', 
+        variant: 'destructive' 
+      });
+    }
+  };
+
   const handleShareWhatsApp = async () => {
     if (!receiptRef.current) return;
 
@@ -451,19 +512,25 @@ const ConferenciaPolpas = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
-            <Button onClick={handleShareWhatsApp} size="lg" className="flex-1 bg-green-600 hover:bg-green-700">
-              <Share2 className="w-5 h-5 mr-2" />
-              WhatsApp
+          <div className="flex flex-col gap-3 justify-center max-w-md mx-auto">
+            <Button onClick={handleCopyText} size="lg" className="w-full bg-blue-600 hover:bg-blue-700">
+              <Copy className="w-5 h-5 mr-2" />
+              Copiar Texto (WhatsApp)
             </Button>
-            <Button onClick={handlePrint} size="lg" className="flex-1">
-              <Printer className="w-5 h-5 mr-2" />
-              Imprimir
-            </Button>
-            <Button onClick={handleSaveAsImage} variant="secondary" size="lg" className="flex-1">
-              <Image className="w-5 h-5 mr-2" />
-              Salvar JPG
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button onClick={handleShareWhatsApp} size="lg" className="flex-1 bg-green-600 hover:bg-green-700">
+                <Share2 className="w-5 h-5 mr-2" />
+                Enviar Imagem
+              </Button>
+              <Button onClick={handlePrint} size="lg" className="flex-1" variant="outline">
+                <Printer className="w-5 h-5 mr-2" />
+                Imprimir
+              </Button>
+              <Button onClick={handleSaveAsImage} variant="secondary" size="lg" className="flex-1">
+                <Image className="w-5 h-5 mr-2" />
+                Salvar JPG
+              </Button>
+            </div>
           </div>
           <div className="flex justify-center">
             <Button onClick={handleNewConferencia} variant="outline" size="lg">
