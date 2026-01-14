@@ -137,12 +137,37 @@ Deno.serve(async (req) => {
 
     console.log('Usuário criado com sucesso:', userData.user?.id)
 
-    // Se tiver username, atualizar o profile
-    if (username && userData.user) {
-      await supabaseAdmin
+    // Create profile for new user
+    if (userData.user) {
+      const { error: profileError } = await supabaseAdmin
         .from('profiles')
-        .update({ username })
-        .eq('id', userData.user.id)
+        .insert({
+          id: userData.user.id,
+          nome,
+          email: email.toLowerCase(),
+          username: username || null
+        })
+
+      if (profileError) {
+        console.error('Erro ao criar profile:', profileError)
+        throw new Error('Usuário criado mas erro ao criar perfil')
+      }
+
+      console.log('Profile criado com sucesso')
+
+      // Create role for new user
+      const { error: roleInsertError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({
+          user_id: userData.user.id,
+          role
+        })
+
+      if (roleInsertError) {
+        console.error('Erro ao criar role:', roleInsertError)
+      } else {
+        console.log('Role criada com sucesso:', role)
+      }
     }
 
     return new Response(
