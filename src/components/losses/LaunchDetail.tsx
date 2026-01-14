@@ -14,10 +14,10 @@ interface LossItem {
   quantidade_perdida: number | null;
   motivo_perda: string;
   observacao: string | null;
-  produtos?: {
-    nome_produto: string;
-    preco_unitario: number;
-    unidade_medida: string;
+  estoque?: {
+    nome: string;
+    preco_custo: number;
+    unidade: string;
   };
 }
 
@@ -46,12 +46,12 @@ const LaunchDetail = ({ launch, onClose, onRefresh }: LaunchDetailProps) => {
           quantidade_perdida,
           motivo_perda,
           observacao,
-          produtos (nome_produto, preco_unitario, unidade_medida)
+          estoque (nome, preco_custo, unidade)
         `)
         .eq('lancamento_id', launch.id);
 
       if (error) throw error;
-      setItems(data || []);
+      setItems((data || []) as LossItem[]);
     } catch (error) {
       console.error('Error fetching items:', error);
     } finally {
@@ -72,7 +72,7 @@ const LaunchDetail = ({ launch, onClose, onRefresh }: LaunchDetailProps) => {
 
   const totalValue = items.reduce((sum, item) => {
     const qty = (item.peso_perdido || 0) + (item.quantidade_perdida || 0);
-    return sum + qty * (item.produtos?.preco_unitario || 0);
+    return sum + qty * (item.estoque?.preco_custo || 0);
   }, 0);
 
   return (
@@ -127,15 +127,15 @@ const LaunchDetail = ({ launch, onClose, onRefresh }: LaunchDetailProps) => {
             <TableBody>
               {items.map(item => {
                 const qty = (item.peso_perdido || 0) + (item.quantidade_perdida || 0);
-                const value = qty * (item.produtos?.preco_unitario || 0);
+                const value = qty * (item.estoque?.preco_custo || 0);
                 
                 return (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">
-                      {item.produtos?.nome_produto || 'N/A'}
+                      {item.estoque?.nome || 'N/A'}
                     </TableCell>
                     <TableCell className="text-right">
-                      {qty} {item.produtos?.unidade_medida}
+                      {qty} {item.estoque?.unidade || 'UN'}
                     </TableCell>
                     <TableCell className="text-right text-destructive font-medium">
                       R$ {value.toFixed(2)}

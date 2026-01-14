@@ -541,7 +541,7 @@ const PerdasTab = ({ items }: PerdasTabProps) => {
         usuario_id: user.id,
         quantidade_perdida: item.quantidade,
         preco_unitario: item.preco_unitario,
-        valor_perda: item.quantidade * item.preco_unitario,
+        // valor_perda is a generated column, do not include it
         motivo_perda: item.motivo_perda as "vencido" | "danificado" | "quebrado" | "avaria" | "outros" | "limpeza" | "manutencao" | "escritorio" | "alimentacao",
         tipo_resolucao: item.tipo_resolucao as "sem_resolucao" | "troca" | "bonificacao" | "desconto",
         data_vencimento: item.data_vencimento || null,
